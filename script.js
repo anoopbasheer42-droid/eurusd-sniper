@@ -3,20 +3,25 @@
    ELITE TRADE GATE
    FULL MARKET ENGINE
    CHART REMOVED
-   =========================================================
 
    ENGINE 1 = A+ SNIPER
    ENGINE 2 = SCALP
    ENGINE 3 = ELITE TRADE GATE
 
-   DATA:
+   MARKET DATA:
    Twelve Data
+
+   NEWS / ECONOMIC CALENDAR:
+   biquote - FREE
+   No API key
+   EUR + USD HIGH IMPACT
+
+   NEWS BLOCK:
+   10 MINUTES BEFORE
+   10 MINUTES AFTER
 
    TIMEFRAMES:
    H4 / H1 / M15 / M5
-
-   IMPORTANT:
-   Paste your existing Twelve Data API key below.
    ========================================================= */
 
 
@@ -68,9 +73,43 @@ const Engine3Config = {
 
     MOMENTUM_LOOKBACK: 5,
 
-    NEWS_BLOCKER: true
+    NEWS_BLOCKER: true,
+
+    /*
+       NEWS BLOCK WINDOW
+
+       10 minutes before event
+       10 minutes after event
+    */
+
+    NEWS_BLOCK_MINUTES: 10
 
 };
+
+
+/* =========================================================
+   FREE NEWS API
+   =========================================================
+
+   biquote economic calendar
+
+   No API key required.
+
+   Countries:
+   EU = EUR
+   US = USD
+
+   High impact only.
+   ========================================================= */
+
+const NEWS_API_BASE =
+    "https://biquote.io/api/calendar";
+
+const NEWS_COUNTRIES =
+    "US,EU";
+
+const NEWS_IMPORTANCE =
+    "high";
 
 
 /* =========================================================
@@ -94,6 +133,31 @@ let livePrice = null;
 let dashboardStarted = false;
 
 let loadingMarketData = false;
+
+
+/* =========================================================
+   GLOBAL NEWS DATA
+   ========================================================= */
+
+let newsData = {
+
+    connected: false,
+
+    events: [],
+
+    lastUpdated: null,
+
+    blocked: false,
+
+    blockingEvent: null,
+
+    nextEUR: null,
+
+    nextUSD: null,
+
+    error: null
+
+};
 
 
 /* =========================================================
@@ -334,19 +398,9 @@ function updateTradingSession() {
 
 /* =========================================================
    HIDE CHART UI
-   =========================================================
-
-   The trading engine does NOT need the chart.
-
-   We hide chart-related UI from the existing HTML so
-   index.html does not need to be changed right now.
    ========================================================= */
 
 function hideChartUI() {
-
-    /*
-       Hide obvious chart containers by ID.
-    */
 
     const chartIds = [
 
@@ -373,10 +427,6 @@ function hideChartUI() {
     });
 
 
-    /*
-       Hide chart timeframe buttons.
-    */
-
     document
         .querySelectorAll("[data-timeframe]")
         .forEach(el => {
@@ -385,11 +435,6 @@ function hideChartUI() {
 
         });
 
-
-    /*
-       Hide elements with chart-related IDs/classes,
-       but do NOT hide the navigation "Charts" button.
-    */
 
     document
         .querySelectorAll(
@@ -401,9 +446,10 @@ function hideChartUI() {
                 (el.id || "").toLowerCase();
 
             const className =
-                (typeof el.className === "string"
-                    ? el.className
-                    : ""
+                (
+                    typeof el.className === "string"
+                        ? el.className
+                        : ""
                 ).toLowerCase();
 
 
@@ -411,6 +457,7 @@ function hideChartUI() {
                 id === "chart" ||
                 id.includes("chartarea") ||
                 id.includes("chart-area") ||
+                id.includes("chartcontainer") ||
                 id.includes("chartcontainer") ||
                 id.includes("pricechart") ||
                 id.includes("livechart") ||
@@ -426,11 +473,6 @@ function hideChartUI() {
 
         });
 
-
-    /*
-       Hide the specific LIVE CHART ENGINE card if
-       it exists in the HTML.
-    */
 
     const allElements =
         document.querySelectorAll(
@@ -448,10 +490,6 @@ function hideChartUI() {
             text.includes("LIVE CHART ENGINE") &&
             text.includes("Waiting for real EUR/USD")
         ) {
-
-            /*
-               Only hide reasonably sized chart cards.
-            */
 
             const rect =
                 el.getBoundingClientRect();
@@ -748,13 +786,6 @@ async function loadAllCandles() {
     const results = {};
 
 
-    /*
-       Sequential requests.
-
-       This protects against Twelve Data
-       rate-limit problems.
-    */
-
     results.H4 =
         await fetchCandles("4h");
 
@@ -798,10 +829,11 @@ async function loadAllCandles() {
 function sleep(ms) {
 
     return new Promise(
-        resolve => setTimeout(
-            resolve,
-            ms
-        )
+        resolve =>
+            setTimeout(
+                resolve,
+                ms
+            )
     );
 
 }
@@ -1533,34 +1565,22 @@ function getEMAAlignment(
 
     if (direction === "BUY") {
 
-        if (
+        return
             ema20 > ema50 &&
             ema50 > ema200
-        ) {
-
-            return "ALIGNED";
-
-        }
-
-
-        return "NOT ALIGNED";
+                ? "ALIGNED"
+                : "NOT ALIGNED";
 
     }
 
 
     if (direction === "SELL") {
 
-        if (
+        return
             ema20 < ema50 &&
             ema50 < ema200
-        ) {
-
-            return "ALIGNED";
-
-        }
-
-
-        return "NOT ALIGNED";
+                ? "ALIGNED"
+                : "NOT ALIGNED";
 
     }
 
@@ -1815,10 +1835,6 @@ function calculateHourlySR(
     }
 
 
-    /*
-       Ignore currently forming H1 candle.
-    */
-
     const completedEnd =
         candles.length - 2;
 
@@ -2007,10 +2023,6 @@ function updateSRDisplay(sr) {
         formatPrice(sr.s2)
     );
 
-
-    /*
-       ALWAYS update S/R current price.
-    */
 
     setManyText(
         [
@@ -2631,16 +2643,11 @@ function calculateTradeLevels(
             Number.isFinite(
                 sr?.r1
             ) &&
-            sr.r1 > entry
+            sr.r1 > entry &&
+            sr.r1 < tp2
         ) {
 
-            if (
-                sr.r1 < tp2
-            ) {
-
-                tp2 = sr.r1;
-
-            }
+            tp2 = sr.r1;
 
         }
 
@@ -2663,16 +2670,11 @@ function calculateTradeLevels(
             Number.isFinite(
                 sr?.s1
             ) &&
-            sr.s1 < entry
+            sr.s1 < entry &&
+            sr.s1 > tp2
         ) {
 
-            if (
-                sr.s1 > tp2
-            ) {
-
-                tp2 = sr.s1;
-
-            }
+            tp2 = sr.s1;
 
         }
 
@@ -2681,9 +2683,7 @@ function calculateTradeLevels(
 
     const reward =
         direction === "BUY"
-
             ? tp2 - entry
-
             : entry - tp2;
 
 
@@ -2704,19 +2704,552 @@ function calculateTradeLevels(
 
 
 /* =========================================================
+   FREE ECONOMIC CALENDAR
+   ========================================================= */
+
+async function fetchEconomicCalendar() {
+
+    try {
+
+        /*
+           Request high-impact EUR/USD events.
+
+           We request a wide enough UTC window so the
+           dashboard can see upcoming events.
+        */
+
+        const now =
+            new Date();
+
+
+        const from =
+            new Date(
+                now.getTime() -
+                24 * 60 * 60 * 1000
+            );
+
+
+        const to =
+            new Date(
+                now.getTime() +
+                7 * 24 * 60 * 60 * 1000
+            );
+
+
+        const url =
+            new URL(
+                NEWS_API_BASE
+            );
+
+
+        url.searchParams.set(
+            "countries",
+            NEWS_COUNTRIES
+        );
+
+
+        url.searchParams.set(
+            "importance",
+            NEWS_IMPORTANCE
+        );
+
+
+        url.searchParams.set(
+            "from",
+            from.toISOString()
+        );
+
+
+        url.searchParams.set(
+            "to",
+            to.toISOString()
+        );
+
+
+        url.searchParams.set(
+            "limit",
+            "200"
+        );
+
+
+        const response =
+            await fetch(
+                url.toString(),
+                {
+                    cache: "no-store"
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "News HTTP " +
+                response.status
+            );
+
+        }
+
+
+        const events =
+            await response.json();
+
+
+        if (
+            !Array.isArray(events)
+        ) {
+
+            throw new Error(
+                "Invalid calendar response"
+            );
+
+        }
+
+
+        newsData.events =
+            events
+                .filter(event => {
+
+                    return (
+                        event &&
+                        (
+                            event.currency === "EUR" ||
+                            event.currency === "USD" ||
+                            event.countryCode === "EU" ||
+                            event.countryCode === "US"
+                        )
+                    );
+
+                })
+                .sort(
+                    (a, b) =>
+                        new Date(a.time) -
+                        new Date(b.time)
+                );
+
+
+        newsData.connected = true;
+
+        newsData.error = null;
+
+        newsData.lastUpdated =
+            new Date();
+
+
+        /*
+           Find nearest EUR event.
+        */
+
+        newsData.nextEUR =
+            getNextNewsEvent(
+                "EUR"
+            );
+
+
+        /*
+           Find nearest USD event.
+        */
+
+        newsData.nextUSD =
+            getNextNewsEvent(
+                "USD"
+            );
+
+
+        /*
+           Check current 10-minute blocker.
+        */
+
+        const blocker =
+            getCurrentNewsBlocker();
+
+
+        newsData.blocked =
+            blocker.blocked;
+
+
+        newsData.blockingEvent =
+            blocker.event;
+
+
+        updateNewsDisplay();
+
+
+        return newsData;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Economic calendar error:",
+            error
+        );
+
+
+        newsData.connected = false;
+
+        newsData.error =
+            error.message ||
+            "Calendar connection error";
+
+        newsData.blocked = true;
+
+        newsData.blockingEvent = null;
+
+        updateNewsDisplay();
+
+
+        return newsData;
+
+    }
+
+}
+
+
+/* =========================================================
+   GET EVENT CURRENCY
+   ========================================================= */
+
+function getEventCurrency(event) {
+
+    if (!event) {
+
+        return null;
+
+    }
+
+
+    if (
+        event.currency === "EUR" ||
+        event.currency === "USD"
+    ) {
+
+        return event.currency;
+
+    }
+
+
+    if (
+        event.countryCode === "EU"
+    ) {
+
+        return "EUR";
+
+    }
+
+
+    if (
+        event.countryCode === "US"
+    ) {
+
+        return "USD";
+
+    }
+
+
+    return null;
+
+}
+
+
+/* =========================================================
+   NEXT NEWS EVENT
+   ========================================================= */
+
+function getNextNewsEvent(
+    currency
+) {
+
+    const now =
+        Date.now();
+
+
+    const future =
+        newsData.events
+            .filter(event => {
+
+                const eventCurrency =
+                    getEventCurrency(
+                        event
+                    );
+
+
+                const eventTime =
+                    new Date(
+                        event.time
+                    ).getTime();
+
+
+                return (
+                    eventCurrency === currency &&
+                    Number.isFinite(eventTime) &&
+                    eventTime >= now
+                );
+
+            })
+            .sort(
+                (a, b) =>
+                    new Date(a.time) -
+                    new Date(b.time)
+            );
+
+
+    return future[0] || null;
+
+}
+
+
+/* =========================================================
+   CURRENT NEWS BLOCKER
+   ========================================================= */
+
+function getCurrentNewsBlocker() {
+
+    if (
+        !newsData.connected
+    ) {
+
+        return {
+
+            blocked: true,
+
+            event: null,
+
+            reason:
+                "Economic calendar not confirmed"
+
+        };
+
+    }
+
+
+    const now =
+        Date.now();
+
+
+    const windowMs =
+        Engine3Config.NEWS_BLOCK_MINUTES *
+        60 *
+        1000;
+
+
+    /*
+       Look for any EUR or USD high-impact
+       event within:
+
+       EVENT TIME - 10 MIN
+       through
+       EVENT TIME + 10 MIN
+    */
+
+    const blockingEvents =
+        newsData.events
+            .filter(event => {
+
+                const currency =
+                    getEventCurrency(
+                        event
+                    );
+
+
+                if (
+                    currency !== "EUR" &&
+                    currency !== "USD"
+                ) {
+
+                    return false;
+
+                }
+
+
+                const eventTime =
+                    new Date(
+                        event.time
+                    ).getTime();
+
+
+                if (
+                    !Number.isFinite(
+                        eventTime
+                    )
+                ) {
+
+                    return false;
+
+                }
+
+
+                return (
+                    Math.abs(
+                        now -
+                        eventTime
+                    ) <=
+                    windowMs
+                );
+
+            })
+            .sort(
+                (a, b) => {
+
+                    return Math.abs(
+                        new Date(a.time).getTime() -
+                        now
+                    ) -
+                    Math.abs(
+                        new Date(b.time).getTime() -
+                        now
+                    );
+
+                }
+            );
+
+
+    if (
+        blockingEvents.length > 0
+    ) {
+
+        return {
+
+            blocked: true,
+
+            event:
+                blockingEvents[0],
+
+            reason:
+                "High-impact news within 10-minute window"
+
+        };
+
+    }
+
+
+    return {
+
+        blocked: false,
+
+        event: null,
+
+        reason:
+            "No high-impact EUR/USD event inside 10-minute window"
+
+    };
+
+}
+
+
+/* =========================================================
+   FORMAT NEWS EVENT
+   ========================================================= */
+
+function formatNewsEvent(
+    event
+) {
+
+    if (!event) {
+
+        return "NONE";
+
+    }
+
+
+    const currency =
+        getEventCurrency(
+            event
+        ) || "—";
+
+
+    const eventTime =
+        new Date(
+            event.time
+        );
+
+
+    if (
+        Number.isNaN(
+            eventTime.getTime()
+        )
+    ) {
+
+        return (
+            currency +
+            " • " +
+            (
+                event.name ||
+                "High Impact Event"
+            )
+        );
+
+    }
+
+
+    const indiaTime =
+        eventTime.toLocaleString(
+            "en-IN",
+            {
+                timeZone:
+                    "Asia/Kolkata",
+
+                day: "2-digit",
+
+                month: "short",
+
+                hour: "2-digit",
+
+                minute: "2-digit",
+
+                hour12: false
+            }
+        );
+
+
+    return (
+        currency +
+        " • " +
+        (
+            event.name ||
+            "High Impact Event"
+        ) +
+        " • " +
+        indiaTime +
+        " IST"
+    );
+
+}
+
+
+/* =========================================================
    NEWS BLOCKER
    ========================================================= */
 
 function evaluateNewsBlocker() {
 
-    /*
-       Real economic calendar API is not connected.
+    if (
+        !Engine3Config.NEWS_BLOCKER
+    ) {
 
-       Therefore we NEVER pretend news is clear.
+        return {
+
+            valid: true,
+
+            status: "CLEAR",
+
+            reason:
+                "News blocker disabled",
+
+            event: null
+
+        };
+
+    }
+
+
+    /*
+       Calendar must be successfully connected.
     */
 
     if (
-        Engine3Config.NEWS_BLOCKER
+        !newsData.connected
     ) {
 
         return {
@@ -2727,7 +3260,39 @@ function evaluateNewsBlocker() {
                 "NEWS NOT CONFIRMED",
 
             reason:
-                "High-impact economic calendar is not connected"
+                "Economic calendar connection unavailable",
+
+            event: null
+
+        };
+
+    }
+
+
+    const blocker =
+        getCurrentNewsBlocker();
+
+
+    if (
+        blocker.blocked
+    ) {
+
+        return {
+
+            valid: false,
+
+            status:
+                "NEWS BLOCKED",
+
+            reason:
+                blocker.event
+                    ? formatNewsEvent(
+                        blocker.event
+                    )
+                    : "High-impact news window active",
+
+            event:
+                blocker.event
 
         };
 
@@ -2738,10 +3303,13 @@ function evaluateNewsBlocker() {
 
         valid: true,
 
-        status: "CLEAR",
+        status:
+            "NEWS CLEAR",
 
         reason:
-            "News blocker disabled"
+            "No high-impact EUR/USD event within ±10 minutes",
+
+        event: null
 
     };
 
@@ -2749,7 +3317,169 @@ function evaluateNewsBlocker() {
 
 
 /* =========================================================
-   DIRECTION
+   NEWS DISPLAY
+   ========================================================= */
+
+function updateNewsDisplay() {
+
+    /*
+       If calendar is not connected.
+    */
+
+    if (
+        !newsData.connected
+    ) {
+
+        setManyText(
+            [
+                "economicCalendar",
+                "newsStatus",
+                "calendarStatus"
+            ],
+            "NEWS NOT CONFIRMED"
+        );
+
+
+        setManyText(
+            [
+                "eurEvents",
+                "eurEventsValue"
+            ],
+            "NOT CONFIRMED"
+        );
+
+
+        setManyText(
+            [
+                "usdEvents",
+                "usdEventsValue"
+            ],
+            "NOT CONFIRMED"
+        );
+
+
+        setManyText(
+            [
+                "highImpact",
+                "highImpactValue"
+            ],
+            "NEWS NOT CONFIRMED"
+        );
+
+
+        setManyText(
+            [
+                "newsBlocker",
+                "newsBlockerStatus"
+            ],
+            "BLOCKED"
+        );
+
+
+        return;
+
+    }
+
+
+    /*
+       EUR next event.
+    */
+
+    setManyText(
+        [
+            "eurEvents",
+            "eurEventsValue"
+        ],
+        formatNewsEvent(
+            newsData.nextEUR
+        )
+    );
+
+
+    /*
+       USD next event.
+    */
+
+    setManyText(
+        [
+            "usdEvents",
+            "usdEventsValue"
+        ],
+        formatNewsEvent(
+            newsData.nextUSD
+        )
+    );
+
+
+    /*
+       Current blocker.
+    */
+
+    const blocker =
+        evaluateNewsBlocker();
+
+
+    setManyText(
+        [
+            "economicCalendar",
+            "newsStatus",
+            "calendarStatus"
+        ],
+        blocker.status
+    );
+
+
+    setManyText(
+        [
+            "highImpact",
+            "highImpactValue"
+        ],
+        blocker.reason
+    );
+
+
+    setManyText(
+        [
+            "newsBlocker",
+            "newsBlockerStatus"
+        ],
+        blocker.status
+    );
+
+
+    /*
+       If blocked, show the blocking event
+       in available news fields.
+    */
+
+    if (
+        blocker.status ===
+        "NEWS BLOCKED"
+    ) {
+
+        const message =
+            "BLOCKED: " +
+            formatNewsEvent(
+                blocker.event
+            );
+
+
+        setManyText(
+            [
+                "highImpact",
+                "highImpactValue",
+                "newsReason"
+            ],
+            message
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   DETERMINE TRADE DIRECTION
    ========================================================= */
 
 function determineTradeDirection() {
@@ -2866,10 +3596,6 @@ function updateTimeframeDisplays() {
             frame.name.toLowerCase();
 
 
-        /*
-           Direction
-        */
-
         setManyText(
             [
                 p + "Direction",
@@ -2881,10 +3607,6 @@ function updateTimeframeDisplays() {
         );
 
 
-        /*
-           Structure
-        */
-
         setManyText(
             [
                 p + "Structure",
@@ -2894,16 +3616,11 @@ function updateTimeframeDisplays() {
         );
 
 
-        /*
-           SWING HIGH
-        */
-
         setManyText(
             [
                 p + "SwingHigh",
-                p + " Swing High",
-                p + "-swing-high",
                 p + "SwingHighValue",
+                p + "-swing-high",
                 p + "-swing-high-value",
                 p + "swingHigh",
                 p + "swing-high"
@@ -2912,16 +3629,11 @@ function updateTimeframeDisplays() {
         );
 
 
-        /*
-           SWING LOW
-        */
-
         setManyText(
             [
                 p + "SwingLow",
-                p + " Swing Low",
-                p + "-swing-low",
                 p + "SwingLowValue",
+                p + "-swing-low",
                 p + "-swing-low-value",
                 p + "swingLow",
                 p + "swing-low"
@@ -2931,10 +3643,6 @@ function updateTimeframeDisplays() {
 
     });
 
-
-    /* =====================================================
-       M15
-       ===================================================== */
 
     const m15 =
         marketData.M15;
@@ -2981,10 +3689,6 @@ function updateTimeframeDisplays() {
             );
 
 
-        /*
-           M15 EMA ALIGNMENT
-        */
-
         setManyText(
             [
                 "m15EMAAlignment",
@@ -3011,10 +3715,6 @@ function updateTimeframeDisplays() {
 
     }
 
-
-    /* =====================================================
-       M5
-       ===================================================== */
 
     const m5 =
         marketData.M5;
@@ -3046,10 +3746,6 @@ function updateTimeframeDisplays() {
             );
 
 
-        /*
-           M5 STRUCTURE
-        */
-
         setManyText(
             [
                 "m5Structure",
@@ -3058,10 +3754,6 @@ function updateTimeframeDisplays() {
             m5Structure
         );
 
-
-        /*
-           M5 EMA
-        */
 
         setManyText(
             [
@@ -3077,10 +3769,6 @@ function updateTimeframeDisplays() {
         );
 
 
-        /*
-           M5 RSI
-        */
-
         setManyText(
             [
                 "m5RSI",
@@ -3095,10 +3783,6 @@ function updateTimeframeDisplays() {
             )
         );
 
-
-        /*
-           M5 DIRECTION
-        */
 
         setManyText(
             [
@@ -3134,11 +3818,6 @@ function getLiquidityStatus(
 
     }
 
-
-    /*
-       Use candles before the latest candle
-       when calculating the reference range.
-    */
 
     const recent =
         candles.slice(-11, -1);
@@ -3288,10 +3967,6 @@ function updateM5Indicators() {
         formatPrice(ema200)
     );
 
-
-    /*
-       M5 RSI DISPLAY
-    */
 
     setManyText(
         [
@@ -3507,12 +4182,6 @@ function evaluateTradeGate() {
         );
 
 
-    /*
-       Always prefer live price.
-       Fall back to latest M5 close only
-       when live price is unavailable.
-    */
-
     const price =
         Number.isFinite(livePrice)
             ? livePrice
@@ -3544,6 +4213,10 @@ function evaluateTradeGate() {
             Engine3Config.MIN_RR;
 
 
+    /*
+       NEW REAL NEWS CHECK
+    */
+
     const news =
         evaluateNewsBlocker();
 
@@ -3557,7 +4230,7 @@ function evaluateTradeGate() {
 
     /*
        SCORE
-       14 checklist conditions
+       14 CHECKLIST CONDITIONS
     */
 
     let score = 0;
@@ -3670,7 +4343,12 @@ function evaluateTradeGate() {
     if (!news.valid) {
 
         hardBlockers.push(
-            "NEWS NOT CONFIRMED"
+            news.status ===
+            "NEWS BLOCKED"
+
+                ? "HIGH-IMPACT NEWS BLOCK"
+
+                : "NEWS NOT CONFIRMED"
         );
 
     }
@@ -3933,6 +4611,12 @@ function updateEngine3Display(
     );
 
 
+    /*
+       NEWS CHECK
+
+       This now reflects the real free calendar.
+    */
+
     updateCheck(
         [
             "newsCheck",
@@ -3941,7 +4625,7 @@ function updateEngine3Display(
         ],
         checks.news?.valid,
         checks.news?.status ||
-        "PENDING"
+        "NEWS NOT CONFIRMED"
     );
 
 
@@ -3985,10 +4669,6 @@ function updateEngine3Display(
         "NO REVERSAL"
     );
 
-
-    /*
-       Risk / Reward
-    */
 
     const levels =
         checks.tradeLevels || {};
@@ -4114,51 +4794,6 @@ function updateCheck(
 
 
 /* =========================================================
-   NEWS DISPLAY
-   ========================================================= */
-
-function updateNewsDisplay() {
-
-    setManyText(
-        [
-            "economicCalendar",
-            "newsStatus",
-            "calendarStatus"
-        ],
-        "WAITING"
-    );
-
-
-    setManyText(
-        [
-            "eurEvents",
-            "eurEventsValue"
-        ],
-        "—"
-    );
-
-
-    setManyText(
-        [
-            "usdEvents",
-            "usdEventsValue"
-        ],
-        "—"
-    );
-
-
-    setManyText(
-        [
-            "highImpact",
-            "highImpactValue"
-        ],
-        "NOT CONNECTED"
-    );
-
-}
-
-
-/* =========================================================
    REFRESH BUTTON
    ========================================================= */
 
@@ -4226,10 +4861,7 @@ async function loadMarketData() {
 
 
         /*
-           2. H4 / H1 / M15 / M5 CANDLES
-
-           These are still required by the
-           trading engines.
+           2. H4 / H1 / M15 / M5
         */
 
         await loadAllCandles();
@@ -4269,10 +4901,10 @@ async function loadMarketData() {
 
 
         /*
-           6. NEWS UI
+           6. REAL FREE ECONOMIC CALENDAR
         */
 
-        updateNewsDisplay();
+        await fetchEconomicCalendar();
 
 
         /*
@@ -4290,9 +4922,6 @@ async function loadMarketData() {
 
         /*
            8. FINAL PRICE SYNC
-
-           This prevents the S/R Current Price
-           field from staying blank.
         */
 
         if (
@@ -4371,7 +5000,7 @@ async function startDashboard() {
 
 
     /*
-       India clock immediately.
+       India clock
     */
 
     updateIndiaTime();
@@ -4384,37 +5013,35 @@ async function startDashboard() {
 
 
     /*
-       REMOVE CHART UI.
+       Remove chart UI
     */
 
     hideChartUI();
 
 
     /*
-       Refresh button.
+       Refresh button
     */
 
     setupRefreshButton();
 
 
     /*
-       Initial live price.
+       Initial live price
     */
 
     await fetchLivePrice();
 
 
     /*
-       Initial complete market load.
+       Initial complete load
     */
 
     await loadMarketData();
 
 
     /*
-       Auto refresh.
-
-       One complete refresh every 60 seconds.
+       Auto refresh every 60 seconds
     */
 
     setInterval(
@@ -4460,14 +5087,21 @@ window.EURUSDSniper = {
 
     marketData,
 
+    newsData,
+
     getLivePrice:
         () => livePrice,
 
     refresh:
         loadMarketData,
 
+    refreshNews:
+        fetchEconomicCalendar,
+
     engine3:
         evaluateTradeGate,
+
+    evaluateNewsBlocker,
 
     calculateHourlySR,
 
