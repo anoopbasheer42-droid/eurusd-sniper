@@ -340,6 +340,8 @@ body {
     flex-direction: column;
     color: var(--muted);
     text-align: center;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .chartMessage strong {
@@ -648,6 +650,13 @@ body {
 }
 
 </style>
+
+<!-- =========================================================
+     LIVE FINANCIAL CHART LIBRARY
+     ========================================================= -->
+
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+
 </head>
 
 <body>
