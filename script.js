@@ -614,11 +614,6 @@ async function fetchLivePrice() {
         );
 
 
-        /*
-           If the previous live price exists,
-           keep displaying it instead of blanking it.
-        */
-
         if (livePrice !== null) {
 
             setManyText(
@@ -2871,14 +2866,24 @@ function updateTimeframeDisplays() {
             frame.name.toLowerCase();
 
 
+        /*
+           Direction
+        */
+
         setManyText(
             [
                 p + "Direction",
-                p + "-direction"
+                p + "-direction",
+                p + "Trend",
+                p + "-trend"
             ],
             direction
         );
 
+
+        /*
+           Structure
+        */
 
         setManyText(
             [
@@ -2889,21 +2894,37 @@ function updateTimeframeDisplays() {
         );
 
 
+        /*
+           SWING HIGH
+        */
+
         setManyText(
             [
                 p + "SwingHigh",
-                p + "Swing High",
-                p + "-swing-high"
+                p + " Swing High",
+                p + "-swing-high",
+                p + "SwingHighValue",
+                p + "-swing-high-value",
+                p + "swingHigh",
+                p + "swing-high"
             ],
             formatPrice(high)
         );
 
 
+        /*
+           SWING LOW
+        */
+
         setManyText(
             [
                 p + "SwingLow",
-                p + "Swing Low",
-                p + "-swing-low"
+                p + " Swing Low",
+                p + "-swing-low",
+                p + "SwingLowValue",
+                p + "-swing-low-value",
+                p + "swingLow",
+                p + "swing-low"
             ],
             formatPrice(low)
         );
@@ -2911,9 +2932,9 @@ function updateTimeframeDisplays() {
     });
 
 
-    /*
+    /* =====================================================
        M15
-    */
+       ===================================================== */
 
     const m15 =
         marketData.M15;
@@ -2940,7 +2961,8 @@ function updateTimeframeDisplays() {
             [
                 "m15Trend",
                 "m15-trend",
-                "m15Direction"
+                "m15Direction",
+                "m15-direction"
             ],
             getTimeframeDirection(
                 m15
@@ -2952,16 +2974,28 @@ function updateTimeframeDisplays() {
             determineTradeDirection();
 
 
-        setManyText(
-            [
-                "m15EMAAlignment",
-                "m15-ema-alignment",
-                "m15EMA"
-            ],
+        const m15EMAAlignment =
             getEMAAlignment(
                 m15,
                 direction || "BUY"
-            )
+            );
+
+
+        /*
+           M15 EMA ALIGNMENT
+        */
+
+        setManyText(
+            [
+                "m15EMAAlignment",
+                "m15EmaAlignment",
+                "m15EMAalignment",
+                "m15-ema-alignment",
+                "m15-emaAlignment",
+                "m15EMA",
+                "m15Ema"
+            ],
+            m15EMAAlignment
         );
 
 
@@ -2978,9 +3012,9 @@ function updateTimeframeDisplays() {
     }
 
 
-    /*
+    /* =====================================================
        M5
-    */
+       ===================================================== */
 
     const m5 =
         marketData.M5;
@@ -2992,33 +3026,86 @@ function updateTimeframeDisplays() {
             determineTradeDirection();
 
 
+        const m5Structure =
+            getMarketStructure(
+                m5
+            );
+
+
+        const m5EMAAlignment =
+            getEMAAlignment(
+                m5,
+                direction || "BUY"
+            );
+
+
+        const m5RSI =
+            calculateRSI(
+                m5,
+                Engine3Config.RSI_PERIOD
+            );
+
+
+        /*
+           M5 STRUCTURE
+        */
+
         setManyText(
             [
                 "m5Structure",
                 "m5-structure"
             ],
-            getMarketStructure(
-                m5
-            )
+            m5Structure
         );
 
+
+        /*
+           M5 EMA
+        */
 
         setManyText(
             [
                 "m5EMAAlignment",
-                "m5-ema-alignment"
+                "m5EmaAlignment",
+                "m5EMA",
+                "m5Ema",
+                "m5-ema",
+                "m5-EMA",
+                "emaStructure"
             ],
-            getEMAAlignment(
-                m5,
-                direction || "BUY"
+            m5EMAAlignment
+        );
+
+
+        /*
+           M5 RSI
+        */
+
+        setManyText(
+            [
+                "m5RSI",
+                "m5Rsi",
+                "m5-rsi",
+                "m5-RSI",
+                "m5RsiValue"
+            ],
+            formatNumber(
+                m5RSI,
+                2
             )
         );
 
 
+        /*
+           M5 DIRECTION
+        */
+
         setManyText(
             [
                 "m5Direction",
-                "m5-direction"
+                "m5-direction",
+                "m5Trend",
+                "m5-trend"
             ],
             getTimeframeDirection(
                 m5
@@ -3202,11 +3289,18 @@ function updateM5Indicators() {
     );
 
 
+    /*
+       M5 RSI DISPLAY
+    */
+
     setManyText(
         [
             "rsi",
             "m5RSI",
-            "m5-rsi"
+            "m5Rsi",
+            "m5-rsi",
+            "m5-RSI",
+            "m5RsiValue"
         ],
         formatNumber(
             rsi,
