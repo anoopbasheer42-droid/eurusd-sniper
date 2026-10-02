@@ -2,7 +2,7 @@
    EUR/USD SNIPER DASHBOARD
    ELITE TRADE GATE
    FULL MARKET ENGINE
-   CORRECTED LIVE VERSION
+   CHART REMOVED
    =========================================================
 
    ENGINE 1 = A+ SNIPER
@@ -16,7 +16,7 @@
    H4 / H1 / M15 / M5
 
    IMPORTANT:
-   Replace ONLY the API key below if required.
+   Paste your existing Twelve Data API key below.
    ========================================================= */
 
 
@@ -24,7 +24,8 @@
    CONFIG
    ========================================================= */
 
-const TWELVE_DATA_API_KEY = "53821bf38bec40e4a88bd1fa06ac32b3";
+const TWELVE_DATA_API_KEY =
+    "PASTE_YOUR_EXISTING_TWELVE_DATA_API_KEY_HERE";
 
 const SYMBOL = "EUR/USD";
 
@@ -73,7 +74,7 @@ const Engine3Config = {
 
 
 /* =========================================================
-   GLOBAL DATA
+   GLOBAL MARKET DATA
    ========================================================= */
 
 let marketData = {
@@ -90,19 +91,13 @@ let marketData = {
 
 let livePrice = null;
 
-let currentTimeframe = "M5";
-
-let chartCanvas = null;
-
-let chartContext = null;
-
 let dashboardStarted = false;
 
 let loadingMarketData = false;
 
 
 /* =========================================================
-   DOM HELPERS
+   BASIC DOM HELPERS
    ========================================================= */
 
 function getElement(id) {
@@ -125,95 +120,31 @@ function setText(id, value) {
 }
 
 
-/* =========================================================
-   ROBUST TEXT UPDATE
-   ========================================================= */
-
 function setManyText(ids, value) {
 
-    ids.forEach(id => {
-
-        const el = document.getElementById(id);
-
-        if (el) {
-
-            el.textContent = value;
-
-        }
-
-    });
+    ids.forEach(id => setText(id, value));
 
 }
 
-
-/*
-   Extra fallback updater.
-
-   This allows the script to update elements even when
-   the HTML uses slightly different IDs/classes.
-*/
-
-function setSelectorText(selectors, value) {
-
-    selectors.forEach(selector => {
-
-        try {
-
-            document
-                .querySelectorAll(selector)
-                .forEach(el => {
-
-                    el.textContent = value;
-
-                });
-
-        }
-
-        catch (error) {
-
-            console.warn(
-
-                "Selector error:",
-
-                selector
-
-            );
-
-        }
-
-    });
-
-}
-
-
-/* =========================================================
-   PRICE FORMAT
-   ========================================================= */
 
 function formatPrice(value) {
 
     if (
-
         value === null ||
-
         value === undefined
-
     ) {
 
         return "—";
 
     }
 
-
     const number = Number(value);
-
 
     if (!Number.isFinite(number)) {
 
         return "—";
 
     }
-
 
     return number.toFixed(5);
 
@@ -223,20 +154,15 @@ function formatPrice(value) {
 function formatNumber(value, decimals = 2) {
 
     if (
-
         value === null ||
-
         value === undefined
-
     ) {
 
         return "—";
 
     }
 
-
     const number = Number(value);
-
 
     if (!Number.isFinite(number)) {
 
@@ -244,142 +170,7 @@ function formatNumber(value, decimals = 2) {
 
     }
 
-
     return number.toFixed(decimals);
-
-}
-
-
-/* =========================================================
-   UPDATE ALL LIVE PRICE LOCATIONS
-   ========================================================= */
-
-function updateAllPriceDisplays(price) {
-
-    if (!Number.isFinite(price)) {
-
-        return;
-
-    }
-
-
-    const formatted = formatPrice(price);
-
-
-    /*
-       Main dashboard price
-    */
-
-    setManyText(
-
-        [
-
-            "price",
-
-            "livePrice",
-
-            "currentPrice",
-
-            "chartPrice",
-
-            "currentPriceValue",
-
-            "livePriceValue",
-
-            "priceValue",
-
-            "live-price",
-
-            "current-price"
-
-        ],
-
-        formatted
-
-    );
-
-
-    /*
-       Support / Resistance current price
-    */
-
-    setManyText(
-
-        [
-
-            "srCurrentPrice",
-
-            "srCurrentPriceValue",
-
-            "sr-current-price",
-
-            "sr-current-price-value",
-
-            "srPrice",
-
-            "srCurrent"
-
-        ],
-
-        formatted
-
-    );
-
-
-    /*
-       Risk / Reward entry
-    */
-
-    setManyText(
-
-        [
-
-            "riskLivePrice",
-
-            "riskEntry",
-
-            "entryPrice",
-
-            "livePriceEntry",
-
-            "riskRewardEntry"
-
-        ],
-
-        formatted
-
-    );
-
-
-    /*
-       Fallback class selectors
-    */
-
-    setSelectorText(
-
-        [
-
-            ".live-price",
-
-            ".livePrice",
-
-            ".current-price",
-
-            ".currentPrice",
-
-            ".sr-current-price",
-
-            ".srCurrentPrice",
-
-            "[data-live-price]",
-
-            "[data-current-price]"
-
-        ],
-
-        formatted
-
-    );
 
 }
 
@@ -390,89 +181,32 @@ function updateAllPriceDisplays(price) {
 
 function updateIndiaTime() {
 
-    try {
+    const now = new Date();
 
-        const now = new Date();
-
-
-        const india = new Intl.DateTimeFormat(
-
+    const india =
+        new Intl.DateTimeFormat(
             "en-IN",
-
             {
-
                 timeZone: "Asia/Kolkata",
-
                 hour: "2-digit",
-
                 minute: "2-digit",
-
                 second: "2-digit",
-
                 hour12: false
-
             }
-
         ).format(now);
 
 
-        setManyText(
-
-            [
-
-                "indiaTime",
-
-                "india-time",
-
-                "clock",
-
-                "time",
-
-                "currentTime",
-
-                "india-time-value"
-
-            ],
-
-            india
-
-        );
+    setManyText(
+        [
+            "indiaTime",
+            "india-time",
+            "clock"
+        ],
+        india
+    );
 
 
-        setSelectorText(
-
-            [
-
-                ".india-time",
-
-                ".indiaTime",
-
-                ".clock",
-
-                "[data-india-time]"
-
-            ],
-
-            india
-
-        );
-
-
-        updateTradingSession();
-
-    }
-
-    catch (error) {
-
-        console.error(
-
-            "India time error:",
-
-            error
-
-        );
-
-    }
+    updateTradingSession();
 
 }
 
@@ -485,55 +219,43 @@ function getTradingSession() {
 
     const now = new Date();
 
-    const utcHour = now.getUTCHours();
+    const utcHour =
+        now.getUTCHours();
 
-    const utcMinute = now.getUTCMinutes();
+    const utcMinute =
+        now.getUTCMinutes();
 
     const minutes =
-
         utcHour * 60 +
-
         utcMinute;
 
 
     const london =
-
         minutes >= 7 * 60 &&
-
         minutes < 16 * 60;
 
 
     const newYork =
-
         minutes >= 12 * 60 &&
-
         minutes < 21 * 60;
 
 
     const asia =
-
         minutes >= 0 &&
-
         minutes < 8 * 60;
 
 
     const sydney =
-
         minutes >= 21 * 60 ||
-
         minutes < 6 * 60;
 
 
     if (london && newYork) {
 
         return {
-
             name: "LONDON + NEW YORK",
-
             active: true,
-
             score: 1
-
         };
 
     }
@@ -542,13 +264,9 @@ function getTradingSession() {
     if (london) {
 
         return {
-
             name: "LONDON",
-
             active: true,
-
             score: 1
-
         };
 
     }
@@ -557,13 +275,9 @@ function getTradingSession() {
     if (newYork) {
 
         return {
-
             name: "NEW YORK",
-
             active: true,
-
             score: 1
-
         };
 
     }
@@ -572,13 +286,9 @@ function getTradingSession() {
     if (asia) {
 
         return {
-
             name: "ASIA",
-
             active: true,
-
             score: 0
-
         };
 
     }
@@ -587,26 +297,18 @@ function getTradingSession() {
     if (sydney) {
 
         return {
-
             name: "SYDNEY",
-
             active: true,
-
             score: 0
-
         };
 
     }
 
 
     return {
-
         name: "OFF SESSION",
-
         active: false,
-
         score: 0
-
     };
 
 }
@@ -614,49 +316,159 @@ function getTradingSession() {
 
 function updateTradingSession() {
 
-    const session = getTradingSession();
+    const session =
+        getTradingSession();
 
 
     setManyText(
-
         [
-
             "session",
-
             "tradingSession",
-
-            "currentSession",
-
-            "sessionValue",
-
-            "sessionName",
-
-            "current-session"
-
+            "currentSession"
         ],
-
         session.name
-
     );
 
+}
 
-    setSelectorText(
 
-        [
+/* =========================================================
+   HIDE CHART UI
+   =========================================================
 
-            ".session",
+   The trading engine does NOT need the chart.
 
-            ".trading-session",
+   We hide chart-related UI from the existing HTML so
+   index.html does not need to be changed right now.
+   ========================================================= */
 
-            ".current-session",
+function hideChartUI() {
 
-            "[data-session]"
+    /*
+       Hide obvious chart containers by ID.
+    */
 
-        ],
+    const chartIds = [
 
-        session.name
+        "chart",
+        "liveChart",
+        "chartContainer",
+        "priceChart",
+        "live-chart",
+        "chart-area"
 
-    );
+    ];
+
+
+    chartIds.forEach(id => {
+
+        const el = getElement(id);
+
+        if (el) {
+
+            el.style.display = "none";
+
+        }
+
+    });
+
+
+    /*
+       Hide chart timeframe buttons.
+    */
+
+    document
+        .querySelectorAll("[data-timeframe]")
+        .forEach(el => {
+
+            el.style.display = "none";
+
+        });
+
+
+    /*
+       Hide elements with chart-related IDs/classes,
+       but do NOT hide the navigation "Charts" button.
+    */
+
+    document
+        .querySelectorAll(
+            "[id*='chart'], [class*='chart']"
+        )
+        .forEach(el => {
+
+            const id =
+                (el.id || "").toLowerCase();
+
+            const className =
+                (typeof el.className === "string"
+                    ? el.className
+                    : ""
+                ).toLowerCase();
+
+
+            if (
+                id === "chart" ||
+                id.includes("chartarea") ||
+                id.includes("chart-area") ||
+                id.includes("chartcontainer") ||
+                id.includes("pricechart") ||
+                id.includes("livechart") ||
+                id.includes("live-chart") ||
+                className.includes("chart-container") ||
+                className.includes("chart-area") ||
+                className.includes("chart-panel")
+            ) {
+
+                el.style.display = "none";
+
+            }
+
+        });
+
+
+    /*
+       Hide the specific LIVE CHART ENGINE card if
+       it exists in the HTML.
+    */
+
+    const allElements =
+        document.querySelectorAll(
+            "section, article, div"
+        );
+
+
+    allElements.forEach(el => {
+
+        const text =
+            (el.innerText || "").trim();
+
+
+        if (
+            text.includes("LIVE CHART ENGINE") &&
+            text.includes("Waiting for real EUR/USD")
+        ) {
+
+            /*
+               Only hide reasonably sized chart cards.
+            */
+
+            const rect =
+                el.getBoundingClientRect();
+
+
+            if (
+                rect.width > 250 &&
+                rect.height > 150
+            ) {
+
+                el.style.display = "none";
+
+            }
+
+        }
+
+    });
 
 }
 
@@ -665,74 +477,61 @@ function updateTradingSession() {
    TWELVE DATA REQUEST
    ========================================================= */
 
-async function twelveData(endpoint, params = {}) {
+async function twelveData(
+    endpoint,
+    params = {}
+) {
 
-    const url = new URL(
-
-        "https://api.twelvedata.com/" +
-
-        endpoint
-
-    );
+    const url =
+        new URL(
+            "https://api.twelvedata.com/" +
+            endpoint
+        );
 
 
     url.searchParams.set(
-
         "apikey",
-
         TWELVE_DATA_API_KEY
-
     );
 
 
     Object.keys(params).forEach(key => {
 
         url.searchParams.set(
-
             key,
-
             params[key]
-
         );
 
     });
 
 
-    const response = await fetch(
-
-        url.toString(),
-
-        {
-
-            cache: "no-store"
-
-        }
-
-    );
+    const response =
+        await fetch(
+            url.toString(),
+            {
+                cache: "no-store"
+            }
+        );
 
 
     if (!response.ok) {
 
         throw new Error(
-
             "HTTP " + response.status
-
         );
 
     }
 
 
-    const data = await response.json();
+    const data =
+        await response.json();
 
 
     if (data.status === "error") {
 
         throw new Error(
-
             data.message ||
-
             "Twelve Data error"
-
         );
 
     }
@@ -751,28 +550,23 @@ async function fetchLivePrice() {
 
     try {
 
-        const data = await twelveData(
-
-            "price",
-
-            {
-
-                symbol: SYMBOL
-
-            }
-
-        );
+        const data =
+            await twelveData(
+                "price",
+                {
+                    symbol: SYMBOL
+                }
+            );
 
 
-        const price = Number(data.price);
+        const price =
+            Number(data.price);
 
 
         if (!Number.isFinite(price)) {
 
             throw new Error(
-
-                "Invalid live price"
-
+                "Invalid price"
             );
 
         }
@@ -781,30 +575,30 @@ async function fetchLivePrice() {
         livePrice = price;
 
 
-        /*
-           IMPORTANT:
-           Update immediately.
-        */
-
-        updateAllPriceDisplays(price);
+        setManyText(
+            [
+                "price",
+                "livePrice",
+                "currentPrice",
+                "chartPrice",
+                "srCurrentPrice",
+                "srCurrentPriceValue",
+                "currentPriceValue",
+                "livePriceValue",
+                "riskLivePrice",
+                "riskEntry",
+                "entryPrice"
+            ],
+            formatPrice(price)
+        );
 
 
         setManyText(
-
             [
-
                 "priceStatus",
-
-                "dataStatus",
-
-                "marketStatus",
-
-                "chartStatus"
-
+                "dataStatus"
             ],
-
             "LIVE"
-
         );
 
 
@@ -815,24 +609,33 @@ async function fetchLivePrice() {
     catch (error) {
 
         console.error(
-
             "Live price error:",
-
             error
-
         );
 
 
         /*
-           Keep previous live price if available.
+           If the previous live price exists,
+           keep displaying it instead of blanking it.
         */
 
-        if (Number.isFinite(livePrice)) {
+        if (livePrice !== null) {
 
-            updateAllPriceDisplays(
-
-                livePrice
-
+            setManyText(
+                [
+                    "price",
+                    "livePrice",
+                    "currentPrice",
+                    "chartPrice",
+                    "srCurrentPrice",
+                    "srCurrentPriceValue",
+                    "currentPriceValue",
+                    "livePriceValue",
+                    "riskLivePrice",
+                    "riskEntry",
+                    "entryPrice"
+                ],
+                formatPrice(livePrice)
             );
 
         }
@@ -853,117 +656,72 @@ async function fetchCandles(interval) {
 
     try {
 
-        const data = await twelveData(
-
-            "time_series",
-
-            {
-
-                symbol: SYMBOL,
-
-                interval: interval,
-
-                outputsize: CANDLE_LIMIT,
-
-                timezone: "UTC",
-
-                order: "ASC"
-
-            }
-
-        );
+        const data =
+            await twelveData(
+                "time_series",
+                {
+                    symbol: SYMBOL,
+                    interval: interval,
+                    outputsize: CANDLE_LIMIT,
+                    timezone: "UTC",
+                    order: "ASC"
+                }
+            );
 
 
         if (
-
             !data.values ||
-
             !Array.isArray(data.values)
-
         ) {
 
             throw new Error(
-
                 "No candle values returned"
-
             );
 
         }
 
 
-        const candles = data.values
+        const candles =
+            data.values
+                .map(c => {
 
-            .map(c => {
+                    return {
 
-                const timestamp =
+                        time:
+                            Math.floor(
+                                new Date(
+                                    c.datetime
+                                ).getTime() / 1000
+                            ),
 
-                    new Date(
+                        open:
+                            Number(c.open),
 
-                        c.datetime
+                        high:
+                            Number(c.high),
 
-                    ).getTime();
+                        low:
+                            Number(c.low),
 
+                        close:
+                            Number(c.close),
 
-                return {
+                        volume:
+                            Number(
+                                c.volume || 0
+                            )
 
-                    time:
+                    };
 
-                        Number.isFinite(timestamp)
+                })
+                .filter(c =>
 
-                            ? Math.floor(
+                    Number.isFinite(c.open) &&
+                    Number.isFinite(c.high) &&
+                    Number.isFinite(c.low) &&
+                    Number.isFinite(c.close)
 
-                                timestamp / 1000
-
-                              )
-
-                            : 0,
-
-                    open:
-
-                        Number(c.open),
-
-                    high:
-
-                        Number(c.high),
-
-                    low:
-
-                        Number(c.low),
-
-                    close:
-
-                        Number(c.close),
-
-                    volume:
-
-                        Number(c.volume || 0)
-
-                };
-
-            })
-
-            .filter(c =>
-
-                Number.isFinite(c.open) &&
-
-                Number.isFinite(c.high) &&
-
-                Number.isFinite(c.low) &&
-
-                Number.isFinite(c.close)
-
-            );
-
-
-        /*
-           Guarantee chronological order.
-        */
-
-        candles.sort(
-
-            (a, b) => a.time - b.time
-
-        );
+                );
 
 
         return candles;
@@ -973,13 +731,9 @@ async function fetchCandles(interval) {
     catch (error) {
 
         console.error(
-
             interval +
-
             " candle error:",
-
             error
-
         );
 
 
@@ -1000,66 +754,45 @@ async function loadAllCandles() {
 
 
     /*
-       Deliberately slower requests.
+       Sequential requests.
 
-       This reduces Twelve Data rate-limit failures.
+       This protects against Twelve Data
+       rate-limit problems.
     */
 
     results.H4 =
-
         await fetchCandles("4h");
-
 
     await sleep(1200);
 
 
     results.H1 =
-
         await fetchCandles("1h");
-
 
     await sleep(1200);
 
 
     results.M15 =
-
         await fetchCandles("15min");
-
 
     await sleep(1200);
 
 
     results.M5 =
-
         await fetchCandles("5min");
 
 
-    marketData.H4 = results.H4;
+    marketData.H4 =
+        results.H4;
 
-    marketData.H1 = results.H1;
+    marketData.H1 =
+        results.H1;
 
-    marketData.M15 = results.M15;
+    marketData.M15 =
+        results.M15;
 
-    marketData.M5 = results.M5;
-
-
-    console.log(
-
-        "Market candles loaded:",
-
-        {
-
-            H4: marketData.H4.length,
-
-            H1: marketData.H1.length,
-
-            M15: marketData.M15.length,
-
-            M5: marketData.M5.length
-
-        }
-
-    );
+    marketData.M5 =
+        results.M5;
 
 
     return results;
@@ -1070,15 +803,10 @@ async function loadAllCandles() {
 function sleep(ms) {
 
     return new Promise(
-
         resolve => setTimeout(
-
             resolve,
-
             ms
-
         )
-
     );
 
 }
@@ -1088,14 +816,14 @@ function sleep(ms) {
    EMA
    ========================================================= */
 
-function calculateEMA(values, period) {
+function calculateEMA(
+    values,
+    period
+) {
 
     if (
-
         !values ||
-
         values.length < period
-
     ) {
 
         return null;
@@ -1104,7 +832,6 @@ function calculateEMA(values, period) {
 
 
     const multiplier =
-
         2 / (period + 1);
 
 
@@ -1112,13 +839,9 @@ function calculateEMA(values, period) {
 
 
     for (
-
         let i = 0;
-
         i < period;
-
         i++
-
     ) {
 
         ema += Number(values[i]);
@@ -1130,27 +853,17 @@ function calculateEMA(values, period) {
 
 
     for (
-
         let i = period;
-
         i < values.length;
-
         i++
-
     ) {
 
         ema =
-
             (
-
                 Number(values[i]) -
-
                 ema
-
             ) *
-
             multiplier +
-
             ema;
 
     }
@@ -1164,9 +877,7 @@ function calculateEMA(values, period) {
 function getCloses(candles) {
 
     return candles.map(
-
         c => Number(c.close)
-
     );
 
 }
@@ -1177,19 +888,13 @@ function getCloses(candles) {
    ========================================================= */
 
 function calculateRSI(
-
     candles,
-
     period = 14
-
 ) {
 
     if (
-
         !candles ||
-
         candles.length <= period
-
     ) {
 
         return null;
@@ -1198,7 +903,6 @@ function calculateRSI(
 
 
     const closes =
-
         getCloses(candles);
 
 
@@ -1208,19 +912,13 @@ function calculateRSI(
 
 
     for (
-
         let i = 1;
-
         i <= period;
-
         i++
-
     ) {
 
         const difference =
-
             closes[i] -
-
             closes[i - 1];
 
 
@@ -1232,11 +930,8 @@ function calculateRSI(
 
         else {
 
-            losses += Math.abs(
-
-                difference
-
-            );
+            losses +=
+                Math.abs(difference);
 
         }
 
@@ -1244,74 +939,55 @@ function calculateRSI(
 
 
     let averageGain =
-
         gains / period;
 
-
     let averageLoss =
-
         losses / period;
 
 
     for (
-
         let i = period + 1;
-
         i < closes.length;
-
         i++
-
     ) {
 
         const difference =
-
             closes[i] -
-
             closes[i - 1];
 
 
         const gain =
-
             difference > 0
-
                 ? difference
-
                 : 0;
 
 
         const loss =
-
             difference < 0
-
                 ? Math.abs(difference)
-
                 : 0;
 
 
         averageGain =
-
             (
-
-                averageGain *
-
-                (period - 1) +
-
+                (
+                    averageGain *
+                    (period - 1)
+                ) +
                 gain
-
-            ) / period;
+            ) /
+            period;
 
 
         averageLoss =
-
             (
-
-                averageLoss *
-
-                (period - 1) +
-
+                (
+                    averageLoss *
+                    (period - 1)
+                ) +
                 loss
-
-            ) / period;
+            ) /
+            period;
 
     }
 
@@ -1324,20 +1000,14 @@ function calculateRSI(
 
 
     const rs =
-
         averageGain /
-
         averageLoss;
 
 
     return 100 -
-
         (
-
             100 /
-
             (1 + rs)
-
         );
 
 }
@@ -1348,19 +1018,13 @@ function calculateRSI(
    ========================================================= */
 
 function calculateATR(
-
     candles,
-
     period = 14
-
 ) {
 
     if (
-
         !candles ||
-
         candles.length <= period
-
     ) {
 
         return null;
@@ -1372,50 +1036,35 @@ function calculateATR(
 
 
     for (
-
         let i = 1;
-
         i < candles.length;
-
         i++
-
     ) {
 
         const current =
-
             candles[i];
 
-
         const previous =
-
             candles[i - 1];
 
 
-        const tr = Math.max(
-
-            current.high -
-
-            current.low,
-
-
-            Math.abs(
+        const tr =
+            Math.max(
 
                 current.high -
+                current.low,
 
-                previous.close
+                Math.abs(
+                    current.high -
+                    previous.close
+                ),
 
-            ),
+                Math.abs(
+                    current.low -
+                    previous.close
+                )
 
-
-            Math.abs(
-
-                current.low -
-
-                previous.close
-
-            )
-
-        );
+            );
 
 
         trueRanges.push(tr);
@@ -1424,9 +1073,7 @@ function calculateATR(
 
 
     if (
-
         trueRanges.length < period
-
     ) {
 
         return null;
@@ -1438,13 +1085,9 @@ function calculateATR(
 
 
     for (
-
         let i = 0;
-
         i < period;
-
         i++
-
     ) {
 
         atr += trueRanges[i];
@@ -1456,26 +1099,20 @@ function calculateATR(
 
 
     for (
-
         let i = period;
-
         i < trueRanges.length;
-
         i++
-
     ) {
 
         atr =
-
             (
-
-                atr *
-
-                (period - 1) +
-
+                (
+                    atr *
+                    (period - 1)
+                ) +
                 trueRanges[i]
-
-            ) / period;
+            ) /
+            period;
 
     }
 
@@ -1490,25 +1127,15 @@ function calculateATR(
    ========================================================= */
 
 function isSwingHigh(
-
     candles,
-
     index,
-
     lookback = 2
-
 ) {
 
     if (
-
         index < lookback ||
-
         index >=
-
-            candles.length -
-
-            lookback
-
+            candles.length - lookback
     ) {
 
         return false;
@@ -1517,37 +1144,20 @@ function isSwingHigh(
 
 
     const value =
-
         candles[index].high;
 
 
     for (
-
-        let i =
-
-            index - lookback;
-
-        i <=
-
-            index + lookback;
-
+        let i = index - lookback;
+        i <= index + lookback;
         i++
-
     ) {
 
-        if (i === index) {
-
-            continue;
-
-        }
+        if (i === index) continue;
 
 
         if (
-
-            candles[i].high >=
-
-            value
-
+            candles[i].high >= value
         ) {
 
             return false;
@@ -1563,25 +1173,15 @@ function isSwingHigh(
 
 
 function isSwingLow(
-
     candles,
-
     index,
-
     lookback = 2
-
 ) {
 
     if (
-
         index < lookback ||
-
         index >=
-
-            candles.length -
-
-            lookback
-
+            candles.length - lookback
     ) {
 
         return false;
@@ -1590,37 +1190,20 @@ function isSwingLow(
 
 
     const value =
-
         candles[index].low;
 
 
     for (
-
-        let i =
-
-            index - lookback;
-
-        i <=
-
-            index + lookback;
-
+        let i = index - lookback;
+        i <= index + lookback;
         i++
-
     ) {
 
-        if (i === index) {
-
-            continue;
-
-        }
+        if (i === index) continue;
 
 
         if (
-
-            candles[i].low <=
-
-            value
-
+            candles[i].low <= value
         ) {
 
             return false;
@@ -1639,14 +1222,13 @@ function isSwingLow(
    LATEST SWINGS
    ========================================================= */
 
-function getLatestSwingHigh(candles) {
+function getLatestSwingHigh(
+    candles
+) {
 
     if (
-
         !candles ||
-
         candles.length < 10
-
     ) {
 
         return null;
@@ -1655,29 +1237,20 @@ function getLatestSwingHigh(candles) {
 
 
     for (
-
         let i =
-
             candles.length - 3;
 
         i >= SWING_LOOKBACK;
 
         i--
-
     ) {
 
         if (
-
             isSwingHigh(
-
                 candles,
-
                 i,
-
                 SWING_LOOKBACK
-
             )
-
         ) {
 
             return candles[i].high;
@@ -1692,14 +1265,13 @@ function getLatestSwingHigh(candles) {
 }
 
 
-function getLatestSwingLow(candles) {
+function getLatestSwingLow(
+    candles
+) {
 
     if (
-
         !candles ||
-
         candles.length < 10
-
     ) {
 
         return null;
@@ -1708,29 +1280,20 @@ function getLatestSwingLow(candles) {
 
 
     for (
-
         let i =
-
             candles.length - 3;
 
         i >= SWING_LOOKBACK;
 
         i--
-
     ) {
 
         if (
-
             isSwingLow(
-
                 candles,
-
                 i,
-
                 SWING_LOOKBACK
-
             )
-
         ) {
 
             return candles[i].low;
@@ -1749,14 +1312,13 @@ function getLatestSwingLow(candles) {
    MARKET STRUCTURE
    ========================================================= */
 
-function getMarketStructure(candles) {
+function getMarketStructure(
+    candles
+) {
 
     if (
-
         !candles ||
-
         candles.length < 20
-
     ) {
 
         return "WAITING";
@@ -1770,60 +1332,38 @@ function getMarketStructure(candles) {
 
 
     for (
-
         let i = SWING_LOOKBACK;
-
         i <
-
             candles.length -
-
             SWING_LOOKBACK;
-
         i++
-
     ) {
 
         if (
-
             isSwingHigh(
-
                 candles,
-
                 i,
-
                 SWING_LOOKBACK
-
             )
-
         ) {
 
             highs.push(
-
                 candles[i].high
-
             );
 
         }
 
 
         if (
-
             isSwingLow(
-
                 candles,
-
                 i,
-
                 SWING_LOOKBACK
-
             )
-
         ) {
 
             lows.push(
-
                 candles[i].low
-
             );
 
         }
@@ -1832,11 +1372,8 @@ function getMarketStructure(candles) {
 
 
     if (
-
         highs.length < 2 ||
-
         lows.length < 2
-
     ) {
 
         return "WAITING";
@@ -1845,31 +1382,21 @@ function getMarketStructure(candles) {
 
 
     const lastHigh =
-
         highs[highs.length - 1];
 
-
     const previousHigh =
-
         highs[highs.length - 2];
 
-
     const lastLow =
-
         lows[lows.length - 1];
 
-
     const previousLow =
-
         lows[lows.length - 2];
 
 
     if (
-
         lastHigh > previousHigh &&
-
         lastLow > previousLow
-
     ) {
 
         return "BULLISH";
@@ -1878,11 +1405,8 @@ function getMarketStructure(candles) {
 
 
     if (
-
         lastHigh < previousHigh &&
-
         lastLow < previousLow
-
     ) {
 
         return "BEARISH";
@@ -1899,14 +1423,13 @@ function getMarketStructure(candles) {
    TIMEFRAME DIRECTION
    ========================================================= */
 
-function getTimeframeDirection(candles) {
+function getTimeframeDirection(
+    candles
+) {
 
     if (
-
         !candles ||
-
-        candles.length < 50
-
+        candles.length < 200
     ) {
 
         return "WAITING";
@@ -1915,32 +1438,23 @@ function getTimeframeDirection(candles) {
 
 
     const closes =
-
         getCloses(candles);
 
 
     const price =
-
         closes[closes.length - 1];
 
 
     const ema20 =
-
         calculateEMA(
-
             closes,
-
             20
-
         );
 
 
     if (
-
         ema20 === null ||
-
         !Number.isFinite(price)
-
     ) {
 
         return "WAITING";
@@ -1972,19 +1486,13 @@ function getTimeframeDirection(candles) {
    ========================================================= */
 
 function getEMAAlignment(
-
     candles,
-
     direction
-
 ) {
 
     if (
-
         !candles ||
-
         candles.length < 200
-
     ) {
 
         return "WAITING";
@@ -1993,51 +1501,34 @@ function getEMAAlignment(
 
 
     const closes =
-
         getCloses(candles);
 
 
     const ema20 =
-
         calculateEMA(
-
             closes,
-
             20
-
         );
 
 
     const ema50 =
-
         calculateEMA(
-
             closes,
-
             50
-
         );
 
 
     const ema200 =
-
         calculateEMA(
-
             closes,
-
             200
-
         );
 
 
     if (
-
         ema20 === null ||
-
         ema50 === null ||
-
         ema200 === null
-
     ) {
 
         return "WAITING";
@@ -2047,34 +1538,34 @@ function getEMAAlignment(
 
     if (direction === "BUY") {
 
-        return (
-
+        if (
             ema20 > ema50 &&
-
             ema50 > ema200
+        ) {
 
-        )
+            return "ALIGNED";
 
-            ? "ALIGNED"
+        }
 
-            : "NOT ALIGNED";
+
+        return "NOT ALIGNED";
 
     }
 
 
     if (direction === "SELL") {
 
-        return (
-
+        if (
             ema20 < ema50 &&
-
             ema50 < ema200
+        ) {
 
-        )
+            return "ALIGNED";
 
-            ? "ALIGNED"
+        }
 
-            : "NOT ALIGNED";
+
+        return "NOT ALIGNED";
 
     }
 
@@ -2088,14 +1579,13 @@ function getEMAAlignment(
    MOMENTUM
    ========================================================= */
 
-function getMomentum(candles) {
+function getMomentum(
+    candles
+) {
 
     if (
-
         !candles ||
-
         candles.length < 10
-
     ) {
 
         return "WAITING";
@@ -2104,21 +1594,16 @@ function getMomentum(candles) {
 
 
     const last =
-
         candles.length - 1;
 
 
     const previous =
-
         last -
-
         Engine3Config.MOMENTUM_LOOKBACK;
 
 
     const difference =
-
         candles[last].close -
-
         candles[previous].close;
 
 
@@ -2145,14 +1630,13 @@ function getMomentum(candles) {
    CANDLE QUALITY
    ========================================================= */
 
-function getCandleQuality(candles) {
+function getCandleQuality(
+    candles
+) {
 
     if (
-
         !candles ||
-
         candles.length < 2
-
     ) {
 
         return "WAITING";
@@ -2161,14 +1645,11 @@ function getCandleQuality(candles) {
 
 
     const candle =
-
         candles[candles.length - 1];
 
 
     const range =
-
         candle.high -
-
         candle.low;
 
 
@@ -2179,17 +1660,14 @@ function getCandleQuality(candles) {
     }
 
 
-    const body = Math.abs(
-
-        candle.close -
-
-        candle.open
-
-    );
+    const body =
+        Math.abs(
+            candle.close -
+            candle.open
+        );
 
 
     const bodyPercent =
-
         body / range;
 
 
@@ -2216,14 +1694,13 @@ function getCandleQuality(candles) {
    EMA EXTENSION
    ========================================================= */
 
-function evaluateEMAExtension(candles) {
+function evaluateEMAExtension(
+    candles
+) {
 
     if (
-
         !candles ||
-
-        candles.length < 50
-
+        candles.length < 200
     ) {
 
         return {
@@ -2242,45 +1719,31 @@ function evaluateEMAExtension(candles) {
 
 
     const closes =
-
         getCloses(candles);
 
 
     const price =
-
         closes[closes.length - 1];
 
 
     const ema20 =
-
         calculateEMA(
-
             closes,
-
             20
-
         );
 
 
     const atr =
-
         calculateATR(
-
             candles,
-
             14
-
         );
 
 
     if (
-
         ema20 === null ||
-
         atr === null ||
-
         atr <= 0
-
     ) {
 
         return {
@@ -2298,24 +1761,19 @@ function evaluateEMAExtension(candles) {
     }
 
 
-    const distance = Math.abs(
-
-        price -
-
-        ema20
-
-    );
+    const distance =
+        Math.abs(
+            price -
+            ema20
+        );
 
 
     const maximum =
-
         atr *
-
         Engine3Config.EMA_EXTENSION_ATR;
 
 
     const valid =
-
         distance <= maximum;
 
 
@@ -2323,11 +1781,10 @@ function evaluateEMAExtension(candles) {
 
         valid,
 
-        status: valid
-
-            ? "VALID"
-
-            : "OVEREXTENDED",
+        status:
+            valid
+                ? "VALID"
+                : "OVEREXTENDED",
 
         distance,
 
@@ -2342,24 +1799,20 @@ function evaluateEMAExtension(candles) {
    H1 SUPPORT / RESISTANCE
    ========================================================= */
 
-function calculateHourlySR(candles) {
+function calculateHourlySR(
+    candles
+) {
 
     if (
-
         !candles ||
-
         candles.length < 20
-
     ) {
 
         return {
 
             r1: null,
-
             r2: null,
-
             s1: null,
-
             s2: null
 
         };
@@ -2368,41 +1821,23 @@ function calculateHourlySR(candles) {
 
 
     /*
-       IMPORTANT:
-       Use only COMPLETED H1 candles.
-
-       The latest H1 candle may still be forming.
+       Ignore currently forming H1 candle.
     */
 
     const completedEnd =
-
         candles.length - 2;
 
 
-    const start = Math.max(
-
-        SWING_LOOKBACK,
-
-        completedEnd -
-
-        H1_SR_LOOKBACK
-
-    );
+    const start =
+        Math.max(
+            SWING_LOOKBACK,
+            completedEnd -
+            H1_SR_LOOKBACK
+        );
 
 
-    /*
-       IMPORTANT:
-       S/R is calculated against the
-       LIVE PRICE, not the last H1 close.
-    */
-
-    const referencePrice =
-
-        Number.isFinite(livePrice)
-
-            ? livePrice
-
-            : candles[completedEnd].close;
+    const current =
+        candles[completedEnd].close;
 
 
     const resistance = [];
@@ -2411,45 +1846,26 @@ function calculateHourlySR(candles) {
 
 
     for (
-
         let i = start;
-
         i <=
-
             completedEnd -
-
             SWING_LOOKBACK;
-
         i++
-
     ) {
 
         if (
-
             isSwingHigh(
-
                 candles,
-
                 i,
-
                 SWING_LOOKBACK
-
             )
-
         ) {
 
             const high =
-
                 candles[i].high;
 
 
-            if (
-
-                high >
-
-                referencePrice
-
-            ) {
+            if (high > current) {
 
                 resistance.push(high);
 
@@ -2459,31 +1875,18 @@ function calculateHourlySR(candles) {
 
 
         if (
-
             isSwingLow(
-
                 candles,
-
                 i,
-
                 SWING_LOOKBACK
-
             )
-
         ) {
 
             const low =
-
                 candles[i].low;
 
 
-            if (
-
-                low <
-
-                referencePrice
-
-            ) {
+            if (low < current) {
 
                 support.push(low);
 
@@ -2495,46 +1898,29 @@ function calculateHourlySR(candles) {
 
 
     function uniqueSorted(
-
         values,
-
         descending
-
     ) {
 
         const result = [];
 
 
         values
-
             .sort(
-
                 descending
-
                     ? (a, b) => b - a
-
                     : (a, b) => a - b
-
             )
-
             .forEach(value => {
 
                 const exists =
-
                     result.some(
-
                         existing =>
-
                             Math.abs(
-
                                 existing -
-
                                 value
-
                             ) <=
-
                             0.00030
-
                     );
 
 
@@ -2552,22 +1938,18 @@ function calculateHourlySR(candles) {
     }
 
 
-    const r = uniqueSorted(
-
-        resistance,
-
-        false
-
-    );
+    const r =
+        uniqueSorted(
+            resistance,
+            false
+        );
 
 
-    const s = uniqueSorted(
-
-        support,
-
-        true
-
-    );
+    const s =
+        uniqueSorted(
+            support,
+            true
+        );
 
 
     return {
@@ -2592,107 +1974,58 @@ function calculateHourlySR(candles) {
 function updateSRDisplay(sr) {
 
     setManyText(
-
         [
-
             "r1",
-
             "resistance1",
-
-            "resistanceOne",
-
-            "resistance-1",
-
-            "srR1"
-
+            "resistanceOne"
         ],
-
         formatPrice(sr.r1)
-
     );
 
 
     setManyText(
-
         [
-
             "r2",
-
             "resistance2",
-
-            "resistanceTwo",
-
-            "resistance-2",
-
-            "srR2"
-
+            "resistanceTwo"
         ],
-
         formatPrice(sr.r2)
-
     );
 
 
     setManyText(
-
         [
-
             "s1",
-
             "support1",
-
-            "supportOne",
-
-            "support-1",
-
-            "srS1"
-
+            "supportOne"
         ],
-
         formatPrice(sr.s1)
-
     );
 
 
     setManyText(
-
         [
-
             "s2",
-
             "support2",
-
-            "supportTwo",
-
-            "support-2",
-
-            "srS2"
-
+            "supportTwo"
         ],
-
         formatPrice(sr.s2)
-
     );
 
 
     /*
-       CRITICAL FIX:
-       Always use the REAL LIVE PRICE here.
+       ALWAYS update S/R current price.
     */
 
-    if (
-
-        Number.isFinite(livePrice)
-
-    ) {
-
-        updateAllPriceDisplays(
-
-            livePrice
-
-        );
-
-    }
+    setManyText(
+        [
+            "currentPrice",
+            "srCurrentPrice",
+            "srCurrentPriceValue",
+            "currentPriceValue"
+        ],
+        formatPrice(livePrice)
+    );
 
 }
 
@@ -2702,21 +2035,14 @@ function updateSRDisplay(sr) {
    ========================================================= */
 
 function evaluateHourlySR(
-
     sr,
-
     price,
-
     direction
-
 ) {
 
     if (
-
         !sr ||
-
         !Number.isFinite(price)
-
     ) {
 
         return {
@@ -2726,8 +2052,7 @@ function evaluateHourlySR(
             status: "DATA WAITING",
 
             reason:
-
-                "H1 S/R unavailable"
+                "H1 S/R data unavailable"
 
         };
 
@@ -2736,17 +2061,14 @@ function evaluateHourlySR(
 
     if (direction === "BUY") {
 
-        const resistance = sr.r1;
+        const resistance =
+            sr.r1;
 
 
         if (
-
             !Number.isFinite(
-
                 resistance
-
             )
-
         ) {
 
             return {
@@ -2756,7 +2078,6 @@ function evaluateHourlySR(
                 status: "NO RESISTANCE",
 
                 reason:
-
                     "No H1 resistance above price"
 
             };
@@ -2765,9 +2086,7 @@ function evaluateHourlySR(
 
 
         if (
-
             resistance <= price
-
         ) {
 
             return {
@@ -2777,8 +2096,7 @@ function evaluateHourlySR(
                 status: "BLOCKED",
 
                 reason:
-
-                    "Price above H1 resistance"
+                    "Price is above H1 resistance"
 
             };
 
@@ -2792,8 +2110,7 @@ function evaluateHourlySR(
             status: "VALID",
 
             reason:
-
-                "Room to H1 resistance"
+                "Room available to H1 resistance"
 
         };
 
@@ -2802,17 +2119,14 @@ function evaluateHourlySR(
 
     if (direction === "SELL") {
 
-        const support = sr.s1;
+        const support =
+            sr.s1;
 
 
         if (
-
             !Number.isFinite(
-
                 support
-
             )
-
         ) {
 
             return {
@@ -2822,7 +2136,6 @@ function evaluateHourlySR(
                 status: "NO SUPPORT",
 
                 reason:
-
                     "No H1 support below price"
 
             };
@@ -2831,9 +2144,7 @@ function evaluateHourlySR(
 
 
         if (
-
             support >= price
-
         ) {
 
             return {
@@ -2843,8 +2154,7 @@ function evaluateHourlySR(
                 status: "BLOCKED",
 
                 reason:
-
-                    "Price below H1 support"
+                    "Price is below H1 support"
 
             };
 
@@ -2858,8 +2168,7 @@ function evaluateHourlySR(
             status: "VALID",
 
             reason:
-
-                "Room to H1 support"
+                "Room available to H1 support"
 
         };
 
@@ -2873,8 +2182,7 @@ function evaluateHourlySR(
         status: "WAITING",
 
         reason:
-
-            "Direction unavailable"
+            "Trade direction unavailable"
 
     };
 
@@ -2886,19 +2194,13 @@ function evaluateHourlySR(
    ========================================================= */
 
 function getEliteRSIProtection(
-
     rsi,
-
     direction
-
 ) {
 
     if (
-
         rsi === null ||
-
         !Number.isFinite(rsi)
-
     ) {
 
         return {
@@ -2906,11 +2208,9 @@ function getEliteRSIProtection(
             valid: false,
 
             status:
-
                 "RSI DATA UNAVAILABLE",
 
             reason:
-
                 "RSI unavailable"
 
         };
@@ -2919,11 +2219,8 @@ function getEliteRSIProtection(
 
 
     if (
-
         rsi >=
-
         Engine3Config.RSI_OVERBOUGHT
-
     ) {
 
         if (direction === "BUY") {
@@ -2935,7 +2232,6 @@ function getEliteRSIProtection(
                 status: "BLOCKED",
 
                 reason:
-
                     "BUY RSI overbought"
 
             };
@@ -2946,11 +2242,8 @@ function getEliteRSIProtection(
 
 
     if (
-
         rsi <=
-
         Engine3Config.RSI_OVERSOLD
-
     ) {
 
         if (direction === "SELL") {
@@ -2962,7 +2255,6 @@ function getEliteRSIProtection(
                 status: "BLOCKED",
 
                 reason:
-
                     "SELL RSI oversold"
 
             };
@@ -2975,13 +2267,9 @@ function getEliteRSIProtection(
     if (direction === "BUY") {
 
         const valid =
-
             rsi >=
-
                 Engine3Config.RSI_BUY_MIN &&
-
             rsi <=
-
                 Engine3Config.RSI_BUY_MAX;
 
 
@@ -2989,17 +2277,15 @@ function getEliteRSIProtection(
 
             valid,
 
-            status: valid
+            status:
+                valid
+                    ? "SAFE"
+                    : "OUTSIDE BUY ZONE",
 
-                ? "SAFE"
-
-                : "OUTSIDE BUY ZONE",
-
-            reason: valid
-
-                ? "BUY RSI safe"
-
-                : "BUY RSI not safe"
+            reason:
+                valid
+                    ? "BUY RSI safe"
+                    : "BUY RSI not in safety range"
 
         };
 
@@ -3009,13 +2295,9 @@ function getEliteRSIProtection(
     if (direction === "SELL") {
 
         const valid =
-
             rsi >=
-
                 Engine3Config.RSI_SELL_MIN &&
-
             rsi <=
-
                 Engine3Config.RSI_SELL_MAX;
 
 
@@ -3023,17 +2305,15 @@ function getEliteRSIProtection(
 
             valid,
 
-            status: valid
+            status:
+                valid
+                    ? "SAFE"
+                    : "OUTSIDE SELL ZONE",
 
-                ? "SAFE"
-
-                : "OUTSIDE SELL ZONE",
-
-            reason: valid
-
-                ? "SELL RSI safe"
-
-                : "SELL RSI not safe"
+            reason:
+                valid
+                    ? "SELL RSI safe"
+                    : "SELL RSI not in safety range"
 
         };
 
@@ -3047,7 +2327,6 @@ function getEliteRSIProtection(
         status: "WAITING",
 
         reason:
-
             "Direction unavailable"
 
     };
@@ -3060,21 +2339,14 @@ function getEliteRSIProtection(
    ========================================================= */
 
 function evaluateAPlusReversal(
-
     candles,
-
     rsi
-
 ) {
 
     if (
-
         !candles ||
-
         candles.length < 3 ||
-
         !Number.isFinite(rsi)
-
     ) {
 
         return {
@@ -3091,19 +2363,15 @@ function evaluateAPlusReversal(
 
 
     const current =
-
         candles[candles.length - 1];
 
 
     const previous =
-
         candles[candles.length - 2];
 
 
     const range =
-
         current.high -
-
         current.low;
 
 
@@ -3123,24 +2391,18 @@ function evaluateAPlusReversal(
 
 
     const closePosition =
-
         (
-
             current.close -
-
             current.low
-
-        ) / range;
+        ) /
+        range;
 
 
     const buyReversal =
-
         current.close >
-
             current.open &&
 
         current.low <
-
             previous.low &&
 
         closePosition >= 0.60 &&
@@ -3149,13 +2411,10 @@ function evaluateAPlusReversal(
 
 
     const sellReversal =
-
         current.close <
-
             current.open &&
 
         current.high >
-
             previous.high &&
 
         closePosition <= 0.40 &&
@@ -3211,23 +2470,15 @@ function evaluateAPlusReversal(
    ========================================================= */
 
 function calculateStructuralSL(
-
     candles,
-
     direction,
-
     entry
-
 ) {
 
     if (
-
         !candles ||
-
         candles.length < 10 ||
-
         !Number.isFinite(entry)
-
     ) {
 
         return null;
@@ -3236,23 +2487,22 @@ function calculateStructuralSL(
 
 
     const swingLow =
-
-        getLatestSwingLow(candles);
+        getLatestSwingLow(
+            candles
+        );
 
 
     const swingHigh =
-
-        getLatestSwingHigh(candles);
+        getLatestSwingHigh(
+            candles
+        );
 
 
     if (direction === "BUY") {
 
         if (
-
             swingLow !== null &&
-
             swingLow < entry
-
         ) {
 
             return swingLow;
@@ -3261,13 +2511,9 @@ function calculateStructuralSL(
 
 
         const atr =
-
             calculateATR(
-
                 candles,
-
                 14
-
             );
 
 
@@ -3283,11 +2529,8 @@ function calculateStructuralSL(
     if (direction === "SELL") {
 
         if (
-
             swingHigh !== null &&
-
             swingHigh > entry
-
         ) {
 
             return swingHigh;
@@ -3296,13 +2539,9 @@ function calculateStructuralSL(
 
 
         const atr =
-
             calculateATR(
-
                 candles,
-
                 14
-
             );
 
 
@@ -3325,63 +2564,30 @@ function calculateStructuralSL(
    ========================================================= */
 
 function calculateTradeLevels(
-
     candles,
-
     direction,
-
     entry,
-
     sr
-
 ) {
 
-    if (!direction) {
-
-        return {
-
-            sl: null,
-
-            tp1: null,
-
-            tp2: null,
-
-            rr: null
-
-        };
-
-    }
-
-
     const sl =
-
         calculateStructuralSL(
-
             candles,
-
             direction,
-
             entry
-
         );
 
 
     if (
-
         sl === null ||
-
         !Number.isFinite(sl)
-
     ) {
 
         return {
 
             sl: null,
-
             tp1: null,
-
             tp2: null,
-
             rr: null
 
         };
@@ -3389,11 +2595,10 @@ function calculateTradeLevels(
     }
 
 
-    const risk = Math.abs(
-
-        entry - sl
-
-    );
+    const risk =
+        Math.abs(
+            entry - sl
+        );
 
 
     if (risk <= 0) {
@@ -3401,11 +2606,8 @@ function calculateTradeLevels(
         return {
 
             sl,
-
             tp1: null,
-
             tp2: null,
-
             rr: null
 
         };
@@ -3421,63 +2623,61 @@ function calculateTradeLevels(
     if (direction === "BUY") {
 
         tp1 =
-
             entry +
-
             risk * 2;
 
 
         tp2 =
-
             entry +
-
             risk * 3;
 
 
         if (
-
-            Number.isFinite(sr?.r1) &&
-
-            sr.r1 > entry &&
-
-            sr.r1 < tp2
-
+            Number.isFinite(
+                sr?.r1
+            ) &&
+            sr.r1 > entry
         ) {
 
-            tp2 = sr.r1;
+            if (
+                sr.r1 < tp2
+            ) {
+
+                tp2 = sr.r1;
+
+            }
 
         }
 
     }
 
 
-    else {
+    else if (direction === "SELL") {
 
         tp1 =
-
             entry -
-
             risk * 2;
 
 
         tp2 =
-
             entry -
-
             risk * 3;
 
 
         if (
-
-            Number.isFinite(sr?.s1) &&
-
-            sr.s1 < entry &&
-
-            sr.s1 > tp2
-
+            Number.isFinite(
+                sr?.s1
+            ) &&
+            sr.s1 < entry
         ) {
 
-            tp2 = sr.s1;
+            if (
+                sr.s1 > tp2
+            ) {
+
+                tp2 = sr.s1;
+
+            }
 
         }
 
@@ -3485,7 +2685,6 @@ function calculateTradeLevels(
 
 
     const reward =
-
         direction === "BUY"
 
             ? tp2 - entry
@@ -3494,18 +2693,14 @@ function calculateTradeLevels(
 
 
     const rr =
-
         reward / risk;
 
 
     return {
 
         sl,
-
         tp1,
-
         tp2,
-
         rr
 
     };
@@ -3519,10 +2714,14 @@ function calculateTradeLevels(
 
 function evaluateNewsBlocker() {
 
+    /*
+       Real economic calendar API is not connected.
+
+       Therefore we NEVER pretend news is clear.
+    */
+
     if (
-
         Engine3Config.NEWS_BLOCKER
-
     ) {
 
         return {
@@ -3530,12 +2729,10 @@ function evaluateNewsBlocker() {
             valid: false,
 
             status:
-
                 "NEWS NOT CONFIRMED",
 
             reason:
-
-                "Economic calendar not connected"
+                "High-impact economic calendar is not connected"
 
         };
 
@@ -3549,7 +2746,6 @@ function evaluateNewsBlocker() {
         status: "CLEAR",
 
         reason:
-
             "News blocker disabled"
 
     };
@@ -3564,29 +2760,20 @@ function evaluateNewsBlocker() {
 function determineTradeDirection() {
 
     const h4 =
-
         getTimeframeDirection(
-
             marketData.H4
-
         );
 
 
     const h1 =
-
         getTimeframeDirection(
-
             marketData.H1
-
         );
 
 
     if (
-
         h4 === "BULLISH" &&
-
         h1 === "BULLISH"
-
     ) {
 
         return "BUY";
@@ -3595,11 +2782,8 @@ function determineTradeDirection() {
 
 
     if (
-
         h4 === "BEARISH" &&
-
         h1 === "BEARISH"
-
     ) {
 
         return "SELL";
@@ -3621,35 +2805,23 @@ function updateTimeframeDisplays() {
     const frames = [
 
         {
-
             name: "H4",
-
             data: marketData.H4
-
         },
 
         {
-
             name: "H1",
-
             data: marketData.H1
-
         },
 
         {
-
             name: "M15",
-
             data: marketData.M15
-
         },
 
         {
-
             name: "M5",
-
             data: marketData.M5
-
         }
 
     ];
@@ -3658,16 +2830,12 @@ function updateTimeframeDisplays() {
     frames.forEach(frame => {
 
         const data =
-
             frame.data;
 
 
         if (
-
             !data ||
-
             data.length < 5
-
         ) {
 
             return;
@@ -3676,281 +2844,185 @@ function updateTimeframeDisplays() {
 
 
         const direction =
-
             getTimeframeDirection(
-
                 data
-
             );
 
 
         const structure =
-
             getMarketStructure(
-
                 data
-
             );
 
 
         const high =
-
             getLatestSwingHigh(
-
                 data
-
             );
 
 
         const low =
-
             getLatestSwingLow(
-
                 data
-
             );
 
 
         const p =
-
             frame.name.toLowerCase();
 
 
         setManyText(
-
             [
-
                 p + "Direction",
-
                 p + "-direction"
-
             ],
-
             direction
-
         );
 
 
         setManyText(
-
             [
-
                 p + "Structure",
-
                 p + "-structure"
-
             ],
-
             structure
-
         );
 
 
         setManyText(
-
             [
-
                 p + "SwingHigh",
-
                 p + "Swing High",
-
                 p + "-swing-high"
-
             ],
-
             formatPrice(high)
-
         );
 
 
         setManyText(
-
             [
-
                 p + "SwingLow",
-
                 p + "Swing Low",
-
                 p + "-swing-low"
-
             ],
-
             formatPrice(low)
-
         );
 
     });
 
 
-    const m15 =
+    /*
+       M15
+    */
 
+    const m15 =
         marketData.M15;
 
 
     if (m15.length) {
 
         const m15Structure =
-
             getMarketStructure(
-
                 m15
-
             );
 
 
         setManyText(
-
             [
-
                 "m15Structure",
-
                 "m15-structure"
-
             ],
-
             m15Structure
-
         );
 
 
         setManyText(
-
             [
-
                 "m15Trend",
-
                 "m15-trend",
-
                 "m15Direction"
-
             ],
-
             getTimeframeDirection(
-
                 m15
-
             )
-
         );
 
 
         const direction =
-
             determineTradeDirection();
 
 
         setManyText(
-
             [
-
                 "m15EMAAlignment",
-
                 "m15-ema-alignment",
-
                 "m15EMA"
-
             ],
-
             getEMAAlignment(
-
                 m15,
-
                 direction || "BUY"
-
             )
-
         );
 
 
         setManyText(
-
             [
-
                 "m15Liquidity",
-
                 "m15-liquidity"
-
             ],
-
             getLiquidityStatus(
-
                 m15
-
             )
-
         );
 
     }
 
 
-    const m5 =
+    /*
+       M5
+    */
 
+    const m5 =
         marketData.M5;
 
 
     if (m5.length) {
 
         const direction =
-
             determineTradeDirection();
 
 
         setManyText(
-
             [
-
                 "m5Structure",
-
                 "m5-structure"
-
             ],
-
             getMarketStructure(
-
                 m5
-
             )
-
         );
 
 
         setManyText(
-
             [
-
                 "m5EMAAlignment",
-
                 "m5-ema-alignment"
-
             ],
-
             getEMAAlignment(
-
                 m5,
-
                 direction || "BUY"
-
             )
-
         );
 
 
         setManyText(
-
             [
-
                 "m5Direction",
-
                 "m5-direction"
-
             ],
-
             getTimeframeDirection(
-
                 m5
-
             )
-
         );
 
     }
@@ -3962,14 +3034,13 @@ function updateTimeframeDisplays() {
    LIQUIDITY
    ========================================================= */
 
-function getLiquidityStatus(candles) {
+function getLiquidityStatus(
+    candles
+) {
 
     if (
-
         !candles ||
-
         candles.length < 20
-
     ) {
 
         return "WAITING";
@@ -3978,54 +3049,37 @@ function getLiquidityStatus(candles) {
 
 
     /*
-       FIX:
-       Exclude the latest candle from the
-       reference range.
-
-       Otherwise the latest high can never
-       be greater than itself.
+       Use candles before the latest candle
+       when calculating the reference range.
     */
 
-    const latest =
-
-        candles[candles.length - 1];
-
-
-    const previousCandles =
-
+    const recent =
         candles.slice(-11, -1);
 
 
-    const high = Math.max(
-
-        ...previousCandles.map(
-
-            c => c.high
-
-        )
-
-    );
+    const high =
+        Math.max(
+            ...recent.map(
+                c => c.high
+            )
+        );
 
 
-    const low = Math.min(
+    const low =
+        Math.min(
+            ...recent.map(
+                c => c.low
+            )
+        );
 
-        ...previousCandles.map(
 
-            c => c.low
-
-        )
-
-    );
+    const latest =
+        candles[candles.length - 1];
 
 
     if (
-
         latest.high > high &&
-
-        latest.close <
-
-            latest.open
-
+        latest.close < latest.open
     ) {
 
         return "HIGH SWEEP";
@@ -4034,13 +3088,8 @@ function getLiquidityStatus(candles) {
 
 
     if (
-
         latest.low < low &&
-
-        latest.close >
-
-            latest.open
-
+        latest.close > latest.open
     ) {
 
         return "LOW SWEEP";
@@ -4060,16 +3109,12 @@ function getLiquidityStatus(candles) {
 function updateM5Indicators() {
 
     const candles =
-
         marketData.M5;
 
 
     if (
-
         !candles ||
-
-        candles.length < 20
-
+        candles.length < 50
     ) {
 
         return;
@@ -4078,199 +3123,125 @@ function updateM5Indicators() {
 
 
     const closes =
-
         getCloses(candles);
 
 
     const ema20 =
-
         calculateEMA(
-
             closes,
-
             20
-
         );
 
 
     const ema50 =
-
         calculateEMA(
-
             closes,
-
             50
-
         );
 
 
     const ema200 =
-
         calculateEMA(
-
             closes,
-
             200
-
         );
 
 
     const rsi =
-
         calculateRSI(
-
             candles,
-
             14
-
         );
 
 
     const momentum =
-
-        getMomentum(candles);
+        getMomentum(
+            candles
+        );
 
 
     const candleQuality =
-
         getCandleQuality(
-
             candles
-
         );
 
 
     const extension =
-
         evaluateEMAExtension(
-
             candles
-
         );
 
 
     setManyText(
-
         [
-
             "ema20",
-
             "m5EMA20",
-
             "m5-ema20"
-
         ],
-
         formatPrice(ema20)
-
     );
 
 
     setManyText(
-
         [
-
             "ema50",
-
             "m5EMA50",
-
             "m5-ema50"
-
         ],
-
         formatPrice(ema50)
-
     );
 
 
     setManyText(
-
         [
-
             "ema200",
-
             "m5EMA200",
-
             "m5-ema200"
-
         ],
-
         formatPrice(ema200)
-
     );
 
 
     setManyText(
-
         [
-
             "rsi",
-
             "m5RSI",
-
             "m5-rsi"
-
         ],
-
         formatNumber(
-
             rsi,
-
             2
-
         )
-
     );
 
 
     setManyText(
-
         [
-
             "momentum",
-
             "m5Momentum",
-
             "m5-momentum"
-
         ],
-
         momentum
-
     );
 
 
     setManyText(
-
         [
-
             "candleQuality",
-
             "m5CandleQuality",
-
             "m5-candle-quality"
-
         ],
-
         candleQuality
-
     );
 
 
     setManyText(
-
         [
-
             "emaExtension",
-
             "m5EMAExtension",
-
             "m5-ema-extension"
-
         ],
-
         extension.status
-
     );
 
 }
@@ -4282,25 +3253,24 @@ function updateM5Indicators() {
 
 function evaluateTradeGate() {
 
-    const m5 = marketData.M5;
+    const m5 =
+        marketData.M5;
 
-    const m15 = marketData.M15;
+    const m15 =
+        marketData.M15;
 
-    const h1 = marketData.H1;
+    const h1 =
+        marketData.H1;
 
-    const h4 = marketData.H4;
+    const h4 =
+        marketData.H4;
 
 
     if (
-
-        m5.length < 50 ||
-
+        m5.length < 200 ||
         m15.length < 20 ||
-
         h1.length < 20 ||
-
         h4.length < 20
-
     ) {
 
         return {
@@ -4314,7 +3284,6 @@ function evaluateTradeGate() {
             direction: null,
 
             reason:
-
                 "Waiting for sufficient market data",
 
             checks: {}
@@ -4325,292 +3294,245 @@ function evaluateTradeGate() {
 
 
     const direction =
-
         determineTradeDirection();
 
 
     const h4Direction =
-
         getTimeframeDirection(
-
             h4
-
         );
 
 
     const h1Direction =
-
         getTimeframeDirection(
-
             h1
-
         );
 
 
     const h4h1Agree =
-
         direction !== null;
 
 
     const m15Structure =
-
         getMarketStructure(
-
             m15
-
         );
 
 
     const m5Structure =
-
         getMarketStructure(
-
             m5
-
         );
 
 
     const structureAgree =
 
         (
-
             direction === "BUY" &&
+            m15Structure === "BULLISH" &&
+            m5Structure === "BULLISH"
+        )
 
-            m15Structure ===
-
-                "BULLISH" &&
-
-            m5Structure ===
-
-                "BULLISH"
-
-        ) ||
+        ||
 
         (
-
             direction === "SELL" &&
-
-            m15Structure ===
-
-                "BEARISH" &&
-
-            m5Structure ===
-
-                "BEARISH"
-
+            m15Structure === "BEARISH" &&
+            m5Structure === "BEARISH"
         );
 
 
     const emaAlignment =
-
         getEMAAlignment(
-
             m5,
-
             direction
-
         );
 
 
     const emaPass =
-
-        emaAlignment ===
-
-        "ALIGNED";
+        emaAlignment === "ALIGNED";
 
 
     const rsi =
-
         calculateRSI(
-
             m5,
-
             Engine3Config.RSI_PERIOD
-
         );
 
 
     const rsiProtection =
-
         getEliteRSIProtection(
-
             rsi,
-
             direction
-
         );
 
 
     const momentum =
-
         getMomentum(m5);
 
 
     const momentumPass =
 
         (
-
             direction === "BUY" &&
+            momentum === "BULLISH"
+        )
 
-            momentum ===
-
-                "BULLISH"
-
-        ) ||
+        ||
 
         (
-
             direction === "SELL" &&
-
-            momentum ===
-
-                "BEARISH"
-
+            momentum === "BEARISH"
         );
 
 
     const candleQuality =
-
-        getCandleQuality(m5);
+        getCandleQuality(
+            m5
+        );
 
 
     const candlePass =
-
-        candleQuality ===
-
-            "STRONG" ||
-
-        candleQuality ===
-
-            "VALID";
+        candleQuality === "STRONG" ||
+        candleQuality === "VALID";
 
 
     const extension =
-
-        evaluateEMAExtension(m5);
+        evaluateEMAExtension(
+            m5
+        );
 
 
     const session =
-
         getTradingSession();
 
 
     const sr =
+        calculateHourlySR(
+            h1
+        );
 
-        calculateHourlySR(h1);
 
+    /*
+       Always prefer live price.
+       Fall back to latest M5 close only
+       when live price is unavailable.
+    */
 
     const price =
-
-        Number.isFinite(
-
-            livePrice
-
-        )
-
+        Number.isFinite(livePrice)
             ? livePrice
-
             : m5[m5.length - 1].close;
 
 
     const srCheck =
-
         evaluateHourlySR(
-
             sr,
-
             price,
-
             direction
-
         );
 
 
     const tradeLevels =
-
         calculateTradeLevels(
-
             m5,
-
             direction,
-
             price,
-
             sr
-
         );
 
 
     const rrPass =
-
         Number.isFinite(
-
             tradeLevels.rr
-
         ) &&
-
         tradeLevels.rr >=
-
             Engine3Config.MIN_RR;
 
 
     const news =
-
         evaluateNewsBlocker();
 
 
     const reversal =
-
         evaluateAPlusReversal(
-
             m5,
-
             rsi
-
         );
 
+
+    /*
+       SCORE
+       14 checklist conditions
+    */
 
     let score = 0;
 
 
-    if (h4h1Agree) score++;
+    if (h4h1Agree)
+        score++;
 
-    if (structureAgree) score++;
 
-    if (emaPass) score++;
+    if (structureAgree)
+        score++;
 
-    if (rsiProtection.valid) score++;
+
+    if (emaPass)
+        score++;
+
+
+    if (rsiProtection.valid)
+        score++;
+
 
     if (
-
         rsiProtection.status !==
-
         "RSI DATA UNAVAILABLE"
+    )
+        score++;
 
-    ) score++;
 
-    if (momentumPass) score++;
+    if (momentumPass)
+        score++;
 
-    if (candlePass) score++;
 
-    if (extension.valid) score++;
+    if (candlePass)
+        score++;
 
-    if (session.active) score++;
 
-    if (srCheck.valid) score++;
+    if (extension.valid)
+        score++;
 
-    if (news.valid) score++;
+
+    if (session.active)
+        score++;
+
+
+    if (srCheck.valid)
+        score++;
+
+
+    if (news.valid)
+        score++;
+
 
     if (
-
         tradeLevels.sl !== null
+    )
+        score++;
 
-    ) score++;
 
-    if (rrPass) score++;
+    if (rrPass)
+        score++;
 
-    if (reversal.valid) score++;
 
+    if (reversal.valid)
+        score++;
+
+
+    /*
+       HARD BLOCKERS
+    */
 
     const hardBlockers = [];
 
@@ -4618,9 +3540,7 @@ function evaluateTradeGate() {
     if (!direction) {
 
         hardBlockers.push(
-
             "H4/H1 direction not aligned"
-
         );
 
     }
@@ -4629,9 +3549,7 @@ function evaluateTradeGate() {
     if (!rsiProtection.valid) {
 
         hardBlockers.push(
-
             "RSI protection failed"
-
         );
 
     }
@@ -4640,9 +3558,7 @@ function evaluateTradeGate() {
     if (!extension.valid) {
 
         hardBlockers.push(
-
             "EMA extension protection failed"
-
         );
 
     }
@@ -4651,9 +3567,7 @@ function evaluateTradeGate() {
     if (!srCheck.valid) {
 
         hardBlockers.push(
-
             "H1 S/R validation failed"
-
         );
 
     }
@@ -4662,9 +3576,7 @@ function evaluateTradeGate() {
     if (!news.valid) {
 
         hardBlockers.push(
-
             "NEWS NOT CONFIRMED"
-
         );
 
     }
@@ -4673,9 +3585,7 @@ function evaluateTradeGate() {
     if (!rrPass) {
 
         hardBlockers.push(
-
             "Real R:R below 1:2"
-
         );
 
     }
@@ -4685,21 +3595,14 @@ function evaluateTradeGate() {
 
 
     if (
-
         hardBlockers.length === 0 &&
-
         score >=
-
             Engine3Config.REQUIRED_SCORE
-
     ) {
 
         decision =
-
             direction === "BUY"
-
                 ? "BUY"
-
                 : "SELL";
 
     }
@@ -4716,11 +3619,8 @@ function evaluateTradeGate() {
         direction,
 
         reason:
-
             hardBlockers.length
-
                 ? hardBlockers[0]
-
                 : "A+ conditions confirmed",
 
         hardBlockers,
@@ -4750,7 +3650,6 @@ function evaluateTradeGate() {
             news,
 
             structuralSL:
-
                 tradeLevels.sl !== null,
 
             rrPass,
@@ -4786,485 +3685,301 @@ function evaluateTradeGate() {
    ENGINE 3 DISPLAY
    ========================================================= */
 
-function updateEngine3Display(result) {
+function updateEngine3Display(
+    result
+) {
 
     setManyText(
-
         [
-
             "engine3Decision",
-
             "gateDecision",
-
             "tradeDecision",
-
             "engine3Status"
-
         ],
-
         result.decision
-
     );
 
 
     setManyText(
-
         [
-
             "engine3Score",
-
             "gateScore",
-
             "aPlusScore"
-
         ],
-
         result.score +
-
         " / " +
-
         result.maxScore
-
     );
 
 
     setManyText(
-
         [
-
             "engine3Reason",
-
             "gateReason",
-
             "aPlusReason"
-
         ],
-
         result.reason
-
     );
 
 
     const checks =
-
         result.checks || {};
 
 
     updateCheck(
-
         [
-
             "h4h1Agree",
-
             "h4H1Agree",
-
             "checkH4H1"
-
         ],
-
         checks.h4h1Agree,
-
         result.direction
-
             ? "CONFIRMED"
-
             : "PENDING"
-
     );
 
 
     updateCheck(
-
         [
-
             "m15m5Structure",
-
             "m15M5Structure",
-
             "checkStructure"
-
         ],
-
         checks.structureAgree,
-
         checks.structureAgree
-
             ? "CONFIRMED"
-
             : "NOT ALIGNED"
-
     );
 
 
     updateCheck(
-
         [
-
             "m5EMAAlignment",
-
             "checkEMA"
-
         ],
-
         checks.emaPass,
-
         result.emaAlignment
-
     );
 
 
     updateCheck(
-
         [
-
             "rsiSafety",
-
             "checkRSI"
-
         ],
-
         checks.rsiProtection?.valid,
-
         checks.rsiProtection?.status ||
-
         "PENDING"
-
     );
 
 
     updateCheck(
-
         [
-
             "rsiProtection",
-
             "rsiOverboughtOversold",
-
             "checkRSIProtection"
-
         ],
-
         checks.rsiProtection?.valid,
-
         checks.rsiProtection?.status ||
-
         "PENDING"
-
     );
 
 
     updateCheck(
-
         [
-
             "momentumCheck",
-
             "checkMomentum"
-
         ],
-
         checks.momentumPass,
-
         result.momentum
-
     );
 
 
     updateCheck(
-
         [
-
             "candleCheck",
-
             "checkCandle"
-
         ],
-
         checks.candlePass,
-
         checks.candleQuality
-
     );
 
 
     updateCheck(
-
         [
-
             "emaExtensionCheck",
-
             "checkExtension"
-
         ],
-
         checks.extension?.valid,
-
         checks.extension?.status ||
-
         "PENDING"
-
     );
 
 
     updateCheck(
-
         [
-
             "sessionCheck",
-
             "checkSession"
-
         ],
-
         checks.session?.active,
-
         checks.session?.name ||
-
         "CONTEXT"
-
     );
 
 
     updateCheck(
-
         [
-
             "srCheck",
-
             "supportResistanceCheck",
-
             "checkSR"
-
         ],
-
         checks.srCheck?.valid,
-
         checks.srCheck?.status ||
-
         "PENDING"
-
     );
 
 
     updateCheck(
-
         [
-
             "newsCheck",
-
             "newsBlockerCheck",
-
             "checkNews"
-
         ],
-
         checks.news?.valid,
-
         checks.news?.status ||
-
         "PENDING"
-
     );
 
 
     updateCheck(
-
         [
-
             "structuralSLCheck",
-
             "checkSL"
-
         ],
-
         checks.structuralSL,
-
         checks.structuralSL
-
             ? "VALID"
-
             : "PENDING"
-
     );
 
 
     updateCheck(
-
         [
-
             "rrCheck",
-
             "realRRCheck",
-
             "checkRR"
-
         ],
-
         checks.rrPass,
-
-        Number.isFinite(
-
-            checks.tradeLevels?.rr
-
-        )
-
+        checks.tradeLevels?.rr !== null
             ? "1:" +
-
               formatNumber(
-
                   checks.tradeLevels.rr,
-
                   2
-
               )
-
             : "PENDING"
-
     );
 
 
     updateCheck(
-
         [
-
             "reversalCheck",
-
             "aPlusReversalCheck",
-
             "checkReversal"
-
         ],
-
         checks.reversal?.valid,
-
         checks.reversal?.status ||
-
         "NO REVERSAL"
-
     );
-
-
-    const levels =
-
-        checks.tradeLevels || {};
 
 
     /*
-       Always use the real live price
-       for entry.
+       Risk / Reward
     */
 
-    if (
+    const levels =
+        checks.tradeLevels || {};
 
+
+    const displayEntry =
         Number.isFinite(livePrice)
-
-    ) {
-
-        updateAllPriceDisplays(
-
-            livePrice
-
-        );
-
-    }
+            ? livePrice
+            : levels.entry;
 
 
     setManyText(
-
         [
+            "riskEntry",
+            "livePriceEntry",
+            "entryPrice",
+            "riskRewardEntry"
+        ],
+        formatPrice(displayEntry)
+    );
 
+
+    setManyText(
+        [
             "structuralSL",
-
             "sl",
-
             "stopLoss"
-
         ],
-
         formatPrice(levels.sl)
-
     );
 
 
     setManyText(
-
         [
-
             "tp1",
-
             "takeProfit1"
-
         ],
-
         formatPrice(levels.tp1)
-
     );
 
 
     setManyText(
-
         [
-
             "tp2",
-
             "takeProfit2"
-
         ],
-
         formatPrice(levels.tp2)
-
     );
 
 
     setManyText(
-
         [
-
             "actualRR",
-
             "realRR",
-
             "riskReward"
-
         ],
-
         Number.isFinite(
-
             levels.rr
-
         )
 
             ? "1:" +
-
               formatNumber(
-
                   levels.rr,
-
                   2
-
               )
 
             : "—"
-
     );
 
 }
 
 
+/* =========================================================
+   CHECK DISPLAY
+   ========================================================= */
+
 function updateCheck(
-
     ids,
-
     passed,
-
     status
-
 ) {
 
     ids.forEach(id => {
 
         const el =
-
             getElement(id);
 
 
@@ -5272,24 +3987,22 @@ function updateCheck(
 
 
         el.textContent =
-
             status ||
-
             "PENDING";
 
 
         if (passed === true) {
 
             el.dataset.status =
-
                 "pass";
 
         }
 
-        else if (passed === false) {
+        else if (
+            passed === false
+        ) {
 
             el.dataset.status =
-
                 "fail";
 
         }
@@ -5297,7 +4010,6 @@ function updateCheck(
         else {
 
             el.dataset.status =
-
                 "pending";
 
         }
@@ -5314,1149 +4026,40 @@ function updateCheck(
 function updateNewsDisplay() {
 
     setManyText(
-
         [
-
             "economicCalendar",
-
             "newsStatus",
-
             "calendarStatus"
-
         ],
-
         "WAITING"
-
     );
 
 
     setManyText(
-
         [
-
             "eurEvents",
-
             "eurEventsValue"
-
         ],
-
         "—"
-
     );
 
 
     setManyText(
-
         [
-
             "usdEvents",
-
             "usdEventsValue"
-
         ],
-
         "—"
-
     );
 
 
     setManyText(
-
         [
-
             "highImpact",
-
             "highImpactValue"
-
         ],
-
         "NOT CONNECTED"
-
     );
-
-}
-
-
-/* =========================================================
-   CHART ENGINE
-   ========================================================= */
-
-function findChartContainer() {
-
-    const ids = [
-
-        "chart",
-
-        "liveChart",
-
-        "chartContainer",
-
-        "priceChart",
-
-        "live-chart",
-
-        "chart-area"
-
-    ];
-
-
-    for (
-
-        const id of ids
-
-    ) {
-
-        const el =
-
-            getElement(id);
-
-
-        if (el) {
-
-            return el;
-
-        }
-
-    }
-
-
-    const candidates =
-
-        document.querySelectorAll(
-
-            "[class*='chart'], [id*='chart']"
-
-        );
-
-
-    if (
-
-        candidates.length
-
-    ) {
-
-        return candidates[0];
-
-    }
-
-
-    return null;
-
-}
-
-
-function setupChartCanvas() {
-
-    const container =
-
-        findChartContainer();
-
-
-    if (!container) {
-
-        console.warn(
-
-            "Chart container not found"
-
-        );
-
-        return false;
-
-    }
-
-
-    let canvas =
-
-        container.querySelector(
-
-            "canvas.sniperChartCanvas"
-
-        );
-
-
-    if (!canvas) {
-
-        canvas =
-
-            document.createElement(
-
-                "canvas"
-
-            );
-
-
-        canvas.className =
-
-            "sniperChartCanvas";
-
-
-        canvas.style.width =
-
-            "100%";
-
-
-        canvas.style.height =
-
-            "320px";
-
-
-        canvas.style.minHeight =
-
-            "320px";
-
-
-        canvas.style.display =
-
-            "block";
-
-
-        container.appendChild(
-
-            canvas
-
-        );
-
-    }
-
-
-    chartCanvas = canvas;
-
-
-    chartContext =
-
-        canvas.getContext("2d");
-
-
-    resizeChartCanvas();
-
-
-    window.addEventListener(
-
-        "resize",
-
-        resizeChartCanvas
-
-    );
-
-
-    return true;
-
-}
-
-
-function resizeChartCanvas() {
-
-    if (!chartCanvas) {
-
-        return;
-
-    }
-
-
-    const rect =
-
-        chartCanvas.parentElement
-
-            .getBoundingClientRect();
-
-
-    const width = Math.max(
-
-        rect.width,
-
-        300
-
-    );
-
-
-    const height = Math.max(
-
-        rect.height,
-
-        320
-
-    );
-
-
-    const ratio =
-
-        window.devicePixelRatio ||
-
-        1;
-
-
-    chartCanvas.width =
-
-        width * ratio;
-
-
-    chartCanvas.height =
-
-        height * ratio;
-
-
-    chartCanvas.style.width =
-
-        width + "px";
-
-
-    chartCanvas.style.height =
-
-        height + "px";
-
-
-    chartContext.setTransform(
-
-        ratio,
-
-        0,
-
-        0,
-
-        ratio,
-
-        0,
-
-        0
-
-    );
-
-
-    drawChart();
-
-}
-
-
-/* =========================================================
-   DRAW CHART
-   ========================================================= */
-
-function drawChart() {
-
-    if (
-
-        !chartContext ||
-
-        !chartCanvas
-
-    ) {
-
-        return;
-
-    }
-
-
-    const candles =
-
-        marketData[
-
-            currentTimeframe
-
-        ] || [];
-
-
-    const width =
-
-        chartCanvas.clientWidth;
-
-
-    const height =
-
-        chartCanvas.clientHeight;
-
-
-    chartContext.clearRect(
-
-        0,
-
-        0,
-
-        width,
-
-        height
-
-    );
-
-
-    chartContext.fillStyle =
-
-        "#030a12";
-
-
-    chartContext.fillRect(
-
-        0,
-
-        0,
-
-        width,
-
-        height
-
-    );
-
-
-    if (!candles.length) {
-
-        chartContext.fillStyle =
-
-            "#9aa7b5";
-
-
-        chartContext.font =
-
-            "16px Arial";
-
-
-        chartContext.textAlign =
-
-            "center";
-
-
-        chartContext.fillText(
-
-            "Waiting for real EUR/USD candle data",
-
-            width / 2,
-
-            height / 2
-
-        );
-
-
-        chartContext.fillText(
-
-            "No simulated market data",
-
-            width / 2,
-
-            height / 2 + 28
-
-        );
-
-
-        return;
-
-    }
-
-
-    const visible =
-
-        candles.slice(-80);
-
-
-    let min = Infinity;
-
-    let max = -Infinity;
-
-
-    visible.forEach(c => {
-
-        min = Math.min(
-
-            min,
-
-            c.low
-
-        );
-
-
-        max = Math.max(
-
-            max,
-
-            c.high
-
-        );
-
-    });
-
-
-    if (
-
-        !Number.isFinite(min) ||
-
-        !Number.isFinite(max) ||
-
-        max <= min
-
-    ) {
-
-        return;
-
-    }
-
-
-    const padding =
-
-        (max - min) * 0.08;
-
-
-    min -= padding;
-
-    max += padding;
-
-
-    const chartTop = 20;
-
-    const chartBottom =
-
-        height - 35;
-
-
-    const chartHeight =
-
-        chartBottom -
-
-        chartTop;
-
-
-    function y(price) {
-
-        return chartBottom -
-
-            (
-
-                (price - min) /
-
-                (max - min)
-
-            ) *
-
-            chartHeight;
-
-    }
-
-
-    chartContext.strokeStyle =
-
-        "rgba(255,255,255,0.08)";
-
-
-    chartContext.lineWidth = 1;
-
-
-    for (
-
-        let i = 0;
-
-        i <= 5;
-
-        i++
-
-    ) {
-
-        const yy =
-
-            chartTop +
-
-            (
-
-                chartHeight / 5
-
-            ) * i;
-
-
-        chartContext.beginPath();
-
-
-        chartContext.moveTo(
-
-            0,
-
-            yy
-
-        );
-
-
-        chartContext.lineTo(
-
-            width,
-
-            yy
-
-        );
-
-
-        chartContext.stroke();
-
-
-        const price =
-
-            max -
-
-            (
-
-                (max - min) /
-
-                5
-
-            ) * i;
-
-
-        chartContext.fillStyle =
-
-            "#7f8c99";
-
-
-        chartContext.font =
-
-            "11px Arial";
-
-
-        chartContext.textAlign =
-
-            "left";
-
-
-        chartContext.fillText(
-
-            price.toFixed(5),
-
-            5,
-
-            yy - 3
-
-        );
-
-    }
-
-
-    const candleWidth =
-
-        width /
-
-        visible.length;
-
-
-    visible.forEach(
-
-        (candle, index) => {
-
-            const x =
-
-                index *
-
-                candleWidth +
-
-                candleWidth / 2;
-
-
-            const openY =
-
-                y(candle.open);
-
-
-            const closeY =
-
-                y(candle.close);
-
-
-            const highY =
-
-                y(candle.high);
-
-
-            const lowY =
-
-                y(candle.low);
-
-
-            const bullish =
-
-                candle.close >=
-
-                candle.open;
-
-
-            chartContext.strokeStyle =
-
-                bullish
-
-                    ? "#20d47a"
-
-                    : "#ff4d5a";
-
-
-            chartContext.fillStyle =
-
-                bullish
-
-                    ? "#20d47a"
-
-                    : "#ff4d5a";
-
-
-            chartContext.beginPath();
-
-
-            chartContext.moveTo(
-
-                x,
-
-                highY
-
-            );
-
-
-            chartContext.lineTo(
-
-                x,
-
-                lowY
-
-            );
-
-
-            chartContext.stroke();
-
-
-            const bodyTop =
-
-                Math.min(
-
-                    openY,
-
-                    closeY
-
-                );
-
-
-            const bodyHeight =
-
-                Math.max(
-
-                    Math.abs(
-
-                        closeY -
-
-                        openY
-
-                    ),
-
-                    1
-
-                );
-
-
-            chartContext.fillRect(
-
-                x -
-
-                    candleWidth *
-
-                    0.30,
-
-                bodyTop,
-
-                candleWidth *
-
-                    0.60,
-
-                bodyHeight
-
-            );
-
-        }
-
-    );
-
-
-    drawIndicatorLine(
-
-        visible,
-
-        20,
-
-        "#f0c674",
-
-        y,
-
-        width
-
-    );
-
-
-    /*
-       LIVE PRICE LINE
-    */
-
-    if (
-
-        Number.isFinite(
-
-            livePrice
-
-        )
-
-    ) {
-
-        const liveY =
-
-            y(livePrice);
-
-
-        chartContext.strokeStyle =
-
-            "#ffffff";
-
-
-        chartContext.setLineDash(
-
-            [5, 5]
-
-        );
-
-
-        chartContext.beginPath();
-
-
-        chartContext.moveTo(
-
-            0,
-
-            liveY
-
-        );
-
-
-        chartContext.lineTo(
-
-            width,
-
-            liveY
-
-        );
-
-
-        chartContext.stroke();
-
-
-        chartContext.setLineDash([]);
-
-
-        chartContext.fillStyle =
-
-            "#ffffff";
-
-
-        chartContext.font =
-
-            "bold 12px Arial";
-
-
-        chartContext.textAlign =
-
-            "right";
-
-
-        chartContext.fillText(
-
-            formatPrice(
-
-                livePrice
-
-            ),
-
-            width - 8,
-
-            liveY - 5
-
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   DRAW EMA LINE
-   ========================================================= */
-
-function drawIndicatorLine(
-
-    candles,
-
-    period,
-
-    stroke,
-
-    y,
-
-    width
-
-) {
-
-    if (
-
-        candles.length < period
-
-    ) {
-
-        return;
-
-    }
-
-
-    const closes =
-
-        candles.map(
-
-            c => c.close
-
-        );
-
-
-    const multiplier =
-
-        2 /
-
-        (period + 1);
-
-
-    let ema = 0;
-
-
-    for (
-
-        let i = 0;
-
-        i < period;
-
-        i++
-
-    ) {
-
-        ema += closes[i];
-
-    }
-
-
-    ema /= period;
-
-
-    const values = [];
-
-
-    values[period - 1] = ema;
-
-
-    for (
-
-        let i = period;
-
-        i < closes.length;
-
-        i++
-
-    ) {
-
-        ema =
-
-            (
-
-                closes[i] -
-
-                ema
-
-            ) *
-
-            multiplier +
-
-            ema;
-
-
-        values[i] = ema;
-
-    }
-
-
-    chartContext.strokeStyle =
-
-        stroke;
-
-
-    chartContext.lineWidth =
-
-        1.5;
-
-
-    chartContext.beginPath();
-
-
-    let started = false;
-
-
-    values.forEach(
-
-        (value, index) => {
-
-            if (
-
-                value === undefined
-
-            ) {
-
-                return;
-
-            }
-
-
-            const x =
-
-                (
-
-                    index /
-
-                    (candles.length - 1)
-
-                ) *
-
-                width;
-
-
-            const yy = y(value);
-
-
-            if (!started) {
-
-                chartContext.moveTo(
-
-                    x,
-
-                    yy
-
-                );
-
-                started = true;
-
-            }
-
-            else {
-
-                chartContext.lineTo(
-
-                    x,
-
-                    yy
-
-                );
-
-            }
-
-        }
-
-    );
-
-
-    chartContext.stroke();
-
-}
-
-
-/* =========================================================
-   CHART BUTTONS
-   ========================================================= */
-
-function setupChartButtons() {
-
-    const buttons =
-
-        document.querySelectorAll(
-
-            "[data-timeframe]"
-
-        );
-
-
-    buttons.forEach(button => {
-
-        button.addEventListener(
-
-            "click",
-
-            () => {
-
-                const tf =
-
-                    button.dataset.timeframe;
-
-
-                if (
-
-                    marketData[tf]
-
-                ) {
-
-                    currentTimeframe =
-
-                        tf;
-
-
-                    drawChart();
-
-                }
-
-            }
-
-        );
-
-    });
-
-
-    const mappings = {
-
-        chartH4: "H4",
-
-        chartH1: "H1",
-
-        chartM15: "M15",
-
-        chartM5: "M5",
-
-        h4Chart: "H4",
-
-        h1Chart: "H1",
-
-        m15Chart: "M15",
-
-        m5Chart: "M5"
-
-    };
-
-
-    Object.keys(
-
-        mappings
-
-    ).forEach(id => {
-
-        const el =
-
-            getElement(id);
-
-
-        if (!el) return;
-
-
-        el.addEventListener(
-
-            "click",
-
-            () => {
-
-                currentTimeframe =
-
-                    mappings[id];
-
-
-                drawChart();
-
-            }
-
-        );
-
-    });
 
 }
 
@@ -6483,7 +4086,6 @@ function setupRefreshButton() {
     ids.forEach(id => {
 
         const button =
-
             getElement(id);
 
 
@@ -6491,15 +4093,12 @@ function setupRefreshButton() {
 
 
         button.addEventListener(
-
             "click",
-
             async () => {
 
                 await loadMarketData();
 
             }
-
         );
 
     });
@@ -6526,14 +4125,17 @@ async function loadMarketData() {
     try {
 
         /*
-           1. LIVE PRICE FIRST
+           1. LIVE PRICE
         */
 
         await fetchLivePrice();
 
 
         /*
-           2. MARKET CANDLES
+           2. H4 / H1 / M15 / M5 CANDLES
+
+           These are still required by the
+           trading engines.
         */
 
         await loadAllCandles();
@@ -6544,17 +4146,12 @@ async function loadMarketData() {
         */
 
         if (
-
-            marketData.H1.length >= 20
-
+            marketData.H1.length
         ) {
 
             const sr =
-
                 calculateHourlySR(
-
                     marketData.H1
-
                 );
 
 
@@ -6578,7 +4175,7 @@ async function loadMarketData() {
 
 
         /*
-           6. NEWS
+           6. NEWS UI
         */
 
         updateNewsDisplay();
@@ -6589,99 +4186,74 @@ async function loadMarketData() {
         */
 
         const gate =
-
             evaluateTradeGate();
 
 
         updateEngine3Display(
-
             gate
-
         );
 
 
         /*
-           8. CHART
-        */
+           8. FINAL PRICE SYNC
 
-        drawChart();
-
-
-        /*
-           9. FINAL LIVE PRICE SYNC
+           This prevents the S/R Current Price
+           field from staying blank.
         */
 
         if (
-
-            Number.isFinite(
-
-                livePrice
-
-            )
-
+            Number.isFinite(livePrice)
         ) {
 
-            updateAllPriceDisplays(
-
-                livePrice
-
+            setManyText(
+                [
+                    "price",
+                    "livePrice",
+                    "currentPrice",
+                    "srCurrentPrice",
+                    "srCurrentPriceValue",
+                    "currentPriceValue",
+                    "livePriceValue",
+                    "riskLivePrice",
+                    "riskEntry",
+                    "entryPrice"
+                ],
+                formatPrice(
+                    livePrice
+                )
             );
 
         }
 
 
         /*
-           10. STATUS
+           9. STATUS
         */
 
-        const totalCandles =
-
-            marketData.H4.length +
-
-            marketData.H1.length +
-
-            marketData.M15.length +
-
-            marketData.M5.length;
-
-
-        if (totalCandles > 0) {
-
-            setManyText(
-
-                [
-
-                    "dataStatus",
-
-                    "marketStatus",
-
-                    "chartStatus"
-
-                ],
-
-                "LIVE DATA"
-
-            );
-
-        }
+        setManyText(
+            [
+                "dataStatus",
+                "marketStatus",
+                "priceStatus"
+            ],
+            "LIVE DATA"
+        );
 
     }
 
     catch (error) {
 
         console.error(
-
             "Dashboard error:",
-
             error
-
         );
 
     }
 
     finally {
 
-        loadingMarketData = false;
+        loadingMarketData =
+            false;
 
     }
 
@@ -6689,7 +4261,7 @@ async function loadMarketData() {
 
 
 /* =========================================================
-   START DASHBOARD
+   STARTUP
    ========================================================= */
 
 async function startDashboard() {
@@ -6705,60 +4277,59 @@ async function startDashboard() {
 
 
     /*
-       INDIA CLOCK IMMEDIATELY
+       India clock immediately.
     */
 
     updateIndiaTime();
 
 
     setInterval(
-
         updateIndiaTime,
-
         1000
-
     );
 
 
     /*
-       CHART
+       REMOVE CHART UI.
     */
 
-    setupChartCanvas();
+    hideChartUI();
 
-    setupChartButtons();
+
+    /*
+       Refresh button.
+    */
 
     setupRefreshButton();
 
 
     /*
-       PRICE FIRST
+       Initial live price.
     */
 
     await fetchLivePrice();
 
 
     /*
-       FULL LOAD
+       Initial complete market load.
     */
 
     await loadMarketData();
 
 
     /*
-       AUTO REFRESH
+       Auto refresh.
+
+       One complete refresh every 60 seconds.
     */
 
     setInterval(
-
         async () => {
 
             await loadMarketData();
 
         },
-
         REFRESH_INTERVAL
-
     );
 
 }
@@ -6769,19 +4340,13 @@ async function startDashboard() {
    ========================================================= */
 
 if (
-
     document.readyState ===
-
     "loading"
-
 ) {
 
     document.addEventListener(
-
         "DOMContentLoaded",
-
         startDashboard
-
     );
 
 }
@@ -6802,15 +4367,12 @@ window.EURUSDSniper = {
     marketData,
 
     getLivePrice:
-
         () => livePrice,
 
     refresh:
-
         loadMarketData,
 
     engine3:
-
         evaluateTradeGate,
 
     calculateHourlySR,
