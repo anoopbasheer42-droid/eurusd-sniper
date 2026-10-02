@@ -14,7 +14,7 @@
    CONFIGURATION
    ========================================================= */
 
-const TWELVE_DATA_API_KEY = "YOUR_TWELVE_DATA_API_KEY";
+const TWELVE_DATA_API_KEY = "53821bf38bec40e4a88bd1fa06ac32b3";
 
 const SYMBOL = "EUR/USD";
 
