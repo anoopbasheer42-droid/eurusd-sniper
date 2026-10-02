@@ -1,10 +1,23 @@
 /* =========================================================
    EUR/USD SNIPER DASHBOARD
-   ENGINE 3 — ELITE TRADE GATE
-   DAILY SUPPORT / RESISTANCE
-   REAL R:R
-   LIVE M5 FINANCIAL CHART
+   FULL ELITE SCRIPT
+   =========================================================
+   LIVE PRICE
+   INDIA TIME
+   MULTI-TIMEFRAME DATA
+   H4 / H1 / M15 / M5
    EMA 20 / 50 / 200
+   RSI
+   MOMENTUM
+   MARKET STRUCTURE
+   DAILY SUPPORT / RESISTANCE
+   STRUCTURAL SL
+   REAL R:R
+   NEWS BLOCKER
+   ENGINE 1
+   ENGINE 2
+   ENGINE 3 - ELITE TRADE GATE
+   A+ REVERSAL
    ========================================================= */
 
 
@@ -12,355 +25,498 @@
    CONFIGURATION
    ========================================================= */
 
-const TWELVE_DATA_API_KEY = "53821bf38bec40e4a88bd1fa06ac32b3";
+const TWELVE_DATA_API_KEY = "YOUR_TWELVE_DATA_API_KEY";
 
-const TWELVE_DATA_BASE = "https://api.twelvedata.com";
-
-const PAIR = "EUR/USD";
-
-const AUTO_REFRESH_MS = 30000;
-
-
-/* =========================================================
-   MARKET STATE
-   ========================================================= */
-
-const MarketState = {
-
-    livePrice: null,
-
-    livePriceTime: null,
-
-    candles: {
-        H4: [],
-        H1: [],
-        M15: [],
-        M5: [],
-        D1: []
-    },
-
-    indicators: {
-        EMA20: null,
-        EMA50: null,
-        EMA200: null,
-        RSI14: null,
-        momentum: null,
-        ATR14: null
-    },
-
-    dailySR: null,
-
-    connected: false,
-
-    lastUpdate: null,
-
-    news: {
-        status: "UNKNOWN",
-        blocked: true,
-        events: []
-    },
-
-    session: {
-        name: "UNKNOWN",
-        active: false,
-        context: ""
-    },
-
-    engine1: null,
-
-    engine2: null,
-
-    engine3: null
-};
-
-
-/* =========================================================
-   ENGINE 3 CONFIGURATION
-   ========================================================= */
+const SYMBOL = "EUR/USD";
 
 const Engine3Config = {
 
-    /* RSI */
-
     RSI_OVERSOLD: 30,
-
     RSI_OVERBOUGHT: 70,
 
     RSI_BUY_MIN: 35,
-
     RSI_BUY_MAX: 68,
 
     RSI_SELL_MIN: 32,
-
     RSI_SELL_MAX: 65,
-
-
-    /* EMA EXTENSION */
 
     EMA_EXTENSION_ATR: 1.5,
 
-
-    /* RISK */
-
     MIN_RR: 2.0,
-
-
-    /* STRUCTURE */
 
     STRUCTURE_LOOKBACK: 20,
 
     SWING_LOOKBACK: 2,
 
-
-    /* MOMENTUM */
-
     MOMENTUM_LOOKBACK: 5,
-
-
-    /* A+ SCORE */
 
     REQUIRED_SCORE: 8,
 
-
-    /* NEWS */
-
     NEWS_BLOCKER: true,
 
-
-    /* DAILY S/R */
-
     DAILY_SR_BUFFER_PERCENT: 0.10
-
 };
 
 
 /* =========================================================
-   CHART STATE
+   GLOBAL DATA
    ========================================================= */
 
-const ChartState = {
+let livePrice = null;
 
-    chart: null,
+let marketData = {
 
-    candleSeries: null,
-
-    ema20Series: null,
-
-    ema50Series: null,
-
-    ema200Series: null,
-
-    livePriceLine: null,
-
-    initialized: false
+    h4: null,
+    h1: null,
+    m15: null,
+    m5: null,
+    daily: null
 
 };
 
+let indicators = {
+
+    h4: null,
+    h1: null,
+    m15: null,
+    m5: null
+
+};
+
+let dailySR = null;
+
+let lastTradeLevels = null;
+
+let chart = null;
+
+let candleSeries = null;
+
+let chartInitialized = false;
+
 
 /* =========================================================
-   BASIC HELPERS
+   BASIC DOM HELPERS
    ========================================================= */
+
+function getElement(id) {
+
+    return document.getElementById(id);
+
+}
+
 
 function setText(id, value) {
 
-    const el = document.getElementById(id);
+    const el = getElement(id);
 
-    if (!el) return;
+    if (el) {
 
-    el.textContent =
-        value === null ||
-        value === undefined ||
-        value === ""
-            ? "—"
-            : value;
-}
+        el.textContent = value;
 
-
-function finite(value) {
-
-    return Number.isFinite(Number(value));
+    }
 
 }
 
 
-function formatPrice(value) {
+function setHTML(id, value) {
 
-    if (!finite(value)) return "—";
+    const el = getElement(id);
 
-    return Number(value).toFixed(5);
+    if (el) {
+
+        el.innerHTML = value;
+
+    }
 
 }
 
 
 /* =========================================================
-   PRICE DISPLAY
+   INDIA TIME
    ========================================================= */
 
-function updatePriceDisplay() {
+function updateIndiaClock() {
 
-    const price = MarketState.livePrice;
+    const now = new Date();
 
-    if (!finite(price)) {
+    const indiaTime = now.toLocaleTimeString("en-IN", {
 
-        setText("livePrice", "—");
+        timeZone: "Asia/Kolkata",
 
-        setText("chartPrice", "—");
+        hour: "2-digit",
 
-        setText("srPrice", "—");
+        minute: "2-digit",
 
-        return;
+        second: "2-digit",
+
+        hour12: false
+
+    });
+
+    setText("indiaTime", indiaTime);
+
+    setText("india-time", indiaTime);
+
+    setText("clock", indiaTime);
+
+}
+
+
+/* =========================================================
+   SESSION
+   ========================================================= */
+
+function getTradingSession() {
+
+    const now = new Date();
+
+    const hour = Number(
+
+        new Intl.DateTimeFormat("en-IN", {
+
+            timeZone: "Asia/Kolkata",
+
+            hour: "numeric",
+
+            hour12: false
+
+        }).format(now)
+
+    );
+
+
+    if (hour >= 13 && hour < 18) {
+
+        return "LONDON";
+
     }
 
-    const formatted = formatPrice(price);
+    if (hour >= 18 && hour < 22) {
+
+        return "NEW YORK";
+
+    }
+
+    if (hour >= 22 || hour < 3) {
+
+        return "NEW YORK / ASIA";
+
+    }
+
+    if (hour >= 3 && hour < 7) {
+
+        return "ASIA";
+
+    }
+
+    return "LONDON";
+
+}
+
+
+function updateSession() {
+
+    setText("session", getTradingSession());
+
+}
+
+
+/* =========================================================
+   TWELVE DATA REQUEST
+   ========================================================= */
+
+async function twelveDataFetch(endpoint, params = {}) {
+
+    const url = new URL(
+
+        "https://api.twelvedata.com/" + endpoint
+
+    );
+
+
+    url.searchParams.set(
+
+        "apikey",
+
+        TWELVE_DATA_API_KEY
+
+    );
+
+
+    Object.keys(params).forEach(key => {
+
+        url.searchParams.set(key, params[key]);
+
+    });
+
+
+    const response = await fetch(url.toString(), {
+
+        cache: "no-store"
+
+    });
+
+
+    if (!response.ok) {
+
+        throw new Error(
+
+            "HTTP " + response.status
+
+        );
+
+    }
+
+
+    const data = await response.json();
+
+
+    if (
+
+        data.status === "error" ||
+
+        data.code ||
+
+        data.message && !data.values
+
+    ) {
+
+        throw new Error(
+
+            data.message || "Twelve Data error"
+
+        );
+
+    }
+
+
+    return data;
+
+}
+
+
+/* =========================================================
+   LIVE PRICE
+   ========================================================= */
+
+async function fetchLivePrice() {
+
+    try {
+
+        const data = await twelveDataFetch(
+
+            "price",
+
+            {
+
+                symbol: SYMBOL,
+
+                format: "JSON"
+
+            }
+
+        );
+
+
+        const price = Number(data.price);
+
+
+        if (!Number.isFinite(price)) {
+
+            throw new Error("Invalid price");
+
+        }
+
+
+        livePrice = price;
+
+
+        updateLivePriceDisplay();
+
+
+        return price;
+
+    }
+
+    catch (error) {
+
+        console.error(
+
+            "Live price error:",
+
+            error
+
+        );
+
+
+        setText(
+
+            "price",
+
+            "—"
+
+        );
+
+
+        setText(
+
+            "livePrice",
+
+            "—"
+
+        );
+
+
+        return null;
+
+    }
+
+}
+
+
+/* =========================================================
+   LIVE PRICE DISPLAY
+   ========================================================= */
+
+function updateLivePriceDisplay() {
+
+    if (!Number.isFinite(livePrice)) {
+
+        return;
+
+    }
+
+
+    const formatted = livePrice.toFixed(5);
+
+
+    setText("price", formatted);
 
     setText("livePrice", formatted);
 
-    setText("chartPrice", formatted);
+    setText("currentPrice", formatted);
 
-    setText("srPrice", formatted);
+    setText("chartPrice", formatted);
 
 }
 
 
 /* =========================================================
-   DATA STATUS
+   CANDLE FETCH
    ========================================================= */
 
-function updateDataStatus() {
+async function fetchCandles(
 
-    if (MarketState.connected) {
+    interval,
 
-        setText("chartState", "DATA: LIVE");
+    outputsize = 250
 
-    } else {
+) {
 
-        setText("chartState", "DATA: ERROR");
+    const data = await twelveDataFetch(
+
+        "time_series",
+
+        {
+
+            symbol: SYMBOL,
+
+            interval: interval,
+
+            outputsize: outputsize,
+
+            format: "JSON",
+
+            order: "ASC"
+
+        }
+
+    );
+
+
+    if (!data.values || !Array.isArray(data.values)) {
+
+        throw new Error(
+
+            "No candle data for " + interval
+
+        );
 
     }
 
-}
 
+    return data.values.map(candle => ({
 
-function updateM5Status() {
+        datetime: candle.datetime,
 
-    const candles = MarketState.candles.M5;
+        open: Number(candle.open),
 
-    if (!candles || !candles.length) {
+        high: Number(candle.high),
 
-        setText("candleStatus", "WAITING");
+        low: Number(candle.low),
 
-        return;
+        close: Number(candle.close),
 
-    }
+        volume: Number(candle.volume || 0)
 
-    setText(
-        "candleStatus",
-        `${candles.length} CANDLES`
+    })).filter(candle =>
+
+        Number.isFinite(candle.open) &&
+
+        Number.isFinite(candle.high) &&
+
+        Number.isFinite(candle.low) &&
+
+        Number.isFinite(candle.close)
+
     );
 
 }
 
 
 /* =========================================================
-   EMA CALCULATION
+   EMA
    ========================================================= */
 
 function calculateEMA(values, period) {
 
-    if (
-        !Array.isArray(values) ||
-        values.length < period
-    ) {
+    if (!values || values.length < period) {
 
         return null;
 
     }
 
+
     const multiplier = 2 / (period + 1);
+
 
     let ema = 0;
 
+
     for (let i = 0; i < period; i++) {
 
-        ema += Number(values[i]);
+        ema += values[i];
 
     }
 
+
     ema /= period;
+
 
     for (let i = period; i < values.length; i++) {
 
         ema =
-            (Number(values[i]) - ema) *
+
+            (values[i] - ema) *
+
             multiplier +
+
             ema;
 
     }
+
 
     return ema;
-
-}
-
-
-/* =========================================================
-   EMA SERIES
-   ========================================================= */
-
-function calculateEMASeries(candles, period) {
-
-    if (
-        !Array.isArray(candles) ||
-        candles.length < period
-    ) {
-
-        return [];
-
-    }
-
-    const result = [];
-
-    const multiplier = 2 / (period + 1);
-
-    let ema = 0;
-
-    for (let i = 0; i < period; i++) {
-
-        ema += Number(candles[i].close);
-
-    }
-
-    ema /= period;
-
-    result.push({
-
-        time: candles[period - 1].chartTime,
-
-        value: ema
-
-    });
-
-    for (
-        let i = period;
-        i < candles.length;
-        i++
-    ) {
-
-        ema =
-            (Number(candles[i].close) - ema) *
-            multiplier +
-            ema;
-
-        result.push({
-
-            time: candles[i].chartTime,
-
-            value: ema
-
-        });
-
-    }
-
-    return result;
 
 }
 
@@ -371,78 +527,68 @@ function calculateEMASeries(candles, period) {
 
 function calculateRSI(values, period = 14) {
 
-    if (
-        !Array.isArray(values) ||
-        values.length <= period
-    ) {
+    if (!values || values.length <= period) {
 
         return null;
 
     }
 
+
     let gains = 0;
 
     let losses = 0;
 
+
     for (let i = 1; i <= period; i++) {
 
-        const difference =
-            Number(values[i]) -
-            Number(values[i - 1]);
+        const change = values[i] - values[i - 1];
 
-        if (difference >= 0) {
 
-            gains += difference;
+        if (change >= 0) {
 
-        } else {
+            gains += change;
 
-            losses += Math.abs(difference);
+        }
+
+        else {
+
+            losses += Math.abs(change);
 
         }
 
     }
 
-    let averageGain =
-        gains / period;
 
-    let averageLoss =
-        losses / period;
+    let averageGain = gains / period;
 
-    for (
-        let i = period + 1;
-        i < values.length;
-        i++
-    ) {
+    let averageLoss = losses / period;
 
-        const difference =
-            Number(values[i]) -
-            Number(values[i - 1]);
 
-        const gain =
-            difference > 0
-                ? difference
-                : 0;
+    for (let i = period + 1; i < values.length; i++) {
 
-        const loss =
-            difference < 0
-                ? Math.abs(difference)
-                : 0;
+        const change = values[i] - values[i - 1];
+
+
+        const gain = Math.max(change, 0);
+
+        const loss = Math.max(-change, 0);
+
 
         averageGain =
-            (
-                averageGain *
-                (period - 1) +
-                gain
-            ) / period;
+
+            ((averageGain * (period - 1)) + gain) /
+
+            period;
+
 
         averageLoss =
-            (
-                averageLoss *
-                (period - 1) +
-                loss
-            ) / period;
+
+            ((averageLoss * (period - 1)) + loss) /
+
+            period;
 
     }
+
 
     if (averageLoss === 0) {
 
@@ -450,12 +596,11 @@ function calculateRSI(values, period = 14) {
 
     }
 
-    const relativeStrength =
-        averageGain /
-        averageLoss;
 
-    return 100 -
-        (100 / (1 + relativeStrength));
+    const rs = averageGain / averageLoss;
+
+
+    return 100 - (100 / (1 + rs));
 
 }
 
@@ -464,89 +609,79 @@ function calculateRSI(values, period = 14) {
    ATR
    ========================================================= */
 
-function calculateATR(
-    candles,
-    period = 14
-) {
+function calculateATR(candles, period = 14) {
 
-    if (
-        !Array.isArray(candles) ||
-        candles.length <= period
-    ) {
+    if (!candles || candles.length <= period) {
 
         return null;
 
     }
 
-    const trueRanges = [];
 
-    for (
-        let i = 1;
-        i < candles.length;
-        i++
-    ) {
+    const trs = [];
+
+
+    for (let i = 1; i < candles.length; i++) {
 
         const current = candles[i];
 
-        const previous =
-            candles[i - 1];
+        const previous = candles[i - 1];
 
-        const range1 =
-            current.high -
-            current.low;
 
-        const range2 =
+        const tr = Math.max(
+
+            current.high - current.low,
+
             Math.abs(
-                current.high -
-                previous.close
-            );
 
-        const range3 =
+                current.high - previous.close
+
+            ),
+
             Math.abs(
-                current.low -
-                previous.close
-            );
 
-        trueRanges.push(
-            Math.max(
-                range1,
-                range2,
-                range3
+                current.low - previous.close
+
             )
+
         );
+
+
+        trs.push(tr);
 
     }
 
-    if (trueRanges.length < period) {
+
+    if (trs.length < period) {
 
         return null;
 
     }
 
+
     let atr = 0;
+
 
     for (let i = 0; i < period; i++) {
 
-        atr += trueRanges[i];
+        atr += trs[i];
 
     }
+
 
     atr /= period;
 
-    for (
-        let i = period;
-        i < trueRanges.length;
-        i++
-    ) {
+
+    for (let i = period; i < trs.length; i++) {
 
         atr =
-            (
-                atr *
-                (period - 1) +
-                trueRanges[i]
-            ) / period;
+
+            ((atr * (period - 1)) + trs[i]) /
+
+            period;
 
     }
+
 
     return atr;
 
@@ -558,230 +693,124 @@ function calculateATR(
    ========================================================= */
 
 function calculateMomentum(
-    values,
+
+    candles,
+
     lookback = 5
+
 ) {
 
-    if (
-        !Array.isArray(values) ||
-        values.length <= lookback
-    ) {
+    if (!candles || candles.length <= lookback) {
 
         return null;
 
     }
 
-    const current =
-        Number(values[values.length - 1]);
+
+    const last = candles[candles.length - 1];
 
     const previous =
-        Number(
-            values[
-                values.length - 1 - lookback
-            ]
-        );
 
-    if (
-        !finite(current) ||
-        !finite(previous)
-    ) {
+        candles[candles.length - 1 - lookback];
+
+
+    return last.close - previous.close;
+
+}
+
+
+/* =========================================================
+   TIMEFRAME INDICATORS
+   ========================================================= */
+
+function calculateIndicators(candles) {
+
+    if (!candles || candles.length < 50) {
 
         return null;
 
     }
 
-    return current - previous;
 
-}
+    const closes = candles.map(
 
+        candle => candle.close
 
-/* =========================================================
-   CANDLE DIRECTION
-   ========================================================= */
-
-function getCandleDirection(candle) {
-
-    if (!candle) return "UNKNOWN";
-
-    if (candle.close > candle.open) {
-
-        return "BULLISH";
-
-    }
-
-    if (candle.close < candle.open) {
-
-        return "BEARISH";
-
-    }
-
-    return "NEUTRAL";
-
-}
+    );
 
 
-/* =========================================================
-   CANDLE QUALITY
-   ========================================================= */
+    const ema20 = calculateEMA(
 
-function evaluateCandleQuality(candle) {
+        closes,
 
-    if (!candle) {
+        20
 
-        return {
-            valid: false,
-            quality: "UNAVAILABLE",
-            score: 0
-        };
-
-    }
-
-    const range =
-        candle.high -
-        candle.low;
-
-    if (range <= 0) {
-
-        return {
-            valid: false,
-            quality: "INVALID",
-            score: 0
-        };
-
-    }
-
-    const body =
-        Math.abs(
-            candle.close -
-            candle.open
-        );
-
-    const bodyRatio =
-        body / range;
-
-    const upperWick =
-        candle.high -
-        Math.max(
-            candle.open,
-            candle.close
-        );
-
-    const lowerWick =
-        Math.min(
-            candle.open,
-            candle.close
-        ) -
-        candle.low;
-
-    if (bodyRatio >= 0.70) {
-
-        return {
-            valid: true,
-            quality: "STRONG",
-            score: 2
-        };
-
-    }
-
-    if (bodyRatio >= 0.45) {
-
-        return {
-            valid: true,
-            quality: "GOOD",
-            score: 1
-        };
-
-    }
-
-    if (
-        upperWick > body * 2 ||
-        lowerWick > body * 2
-    ) {
-
-        return {
-            valid: true,
-            quality: "REJECTION",
-            score: 1
-        };
-
-    }
-
-    return {
-        valid: false,
-        quality: "WEAK",
-        score: 0
-    };
-
-}
+    );
 
 
-/* =========================================================
-   EMA ALIGNMENT
-   ========================================================= */
+    const ema50 = calculateEMA(
 
-function evaluateEMAAlignment(
-    ema20,
-    ema50,
-    ema200,
-    direction
-) {
+        closes,
 
-    if (
-        !finite(ema20) ||
-        !finite(ema50) ||
-        !finite(ema200)
-    ) {
+        50
 
-        return {
-            valid: false,
-            status: "EMA DATA UNAVAILABLE"
-        };
+    );
 
-    }
 
-    if (direction === "BUY") {
+    const ema200 = calculateEMA(
 
-        const valid =
-            ema20 > ema50 &&
-            ema50 > ema200;
+        closes,
 
-        return {
+        200
 
-            valid,
+    );
 
-            status:
-                valid
-                    ? "BULLISH ALIGNMENT"
-                    : "NOT ALIGNED"
 
-        };
+    const rsi = calculateRSI(
 
-    }
+        closes,
 
-    if (direction === "SELL") {
+        14
 
-        const valid =
-            ema20 < ema50 &&
-            ema50 < ema200;
+    );
 
-        return {
 
-            valid,
+    const atr = calculateATR(
 
-            status:
-                valid
-                    ? "BEARISH ALIGNMENT"
-                    : "NOT ALIGNED"
+        candles,
 
-        };
+        14
 
-    }
+    );
+
+
+    const momentum = calculateMomentum(
+
+        candles,
+
+        Engine3Config.MOMENTUM_LOOKBACK
+
+    );
+
+
+    const price = closes[closes.length - 1];
+
 
     return {
 
-        valid: false,
+        price,
 
-        status: "NO DIRECTION"
+        ema20,
+
+        ema50,
+
+        ema200,
+
+        rsi,
+
+        atr,
+
+        momentum
 
     };
 
@@ -792,85 +821,42 @@ function evaluateEMAAlignment(
    TIMEFRAME DIRECTION
    ========================================================= */
 
-function getTimeframeDirection(candles) {
+function getTimeframeDirection(indicator) {
+
+    if (!indicator || !Number.isFinite(indicator.price)) {
+
+        return "WAITING";
+
+    }
+
 
     if (
-        !candles ||
-        candles.length < 20
+
+        Number.isFinite(indicator.ema20) &&
+
+        indicator.price > indicator.ema20
+
     ) {
 
-        return "UNKNOWN";
+        return "BULLISH";
 
     }
 
-    const closes =
-        candles.map(
-            c => c.close
-        );
-
-    const ema20 =
-        calculateEMA(
-            closes,
-            20
-        );
-
-    const last =
-        closes[closes.length - 1];
 
     if (
-        !finite(ema20) ||
-        !finite(last)
+
+        Number.isFinite(indicator.ema20) &&
+
+        indicator.price < indicator.ema20
+
     ) {
 
-        return "UNKNOWN";
+        return "BEARISH";
 
     }
 
-    if (last > ema20) {
-
-        return "BUY";
-
-    }
-
-    if (last < ema20) {
-
-        return "SELL";
-
-    }
 
     return "NEUTRAL";
-
-}
-
-
-/* =========================================================
-   HIGHER TIMEFRAME AGREEMENT
-   ========================================================= */
-
-function evaluateHigherTimeframeAgreement() {
-
-    const h4 =
-        getTimeframeDirection(
-            MarketState.candles.H4
-        );
-
-    const h1 =
-        getTimeframeDirection(
-            MarketState.candles.H1
-        );
-
-    return {
-
-        h4,
-
-        h1,
-
-        valid:
-            h4 !== "UNKNOWN" &&
-            h1 !== "UNKNOWN" &&
-            h4 === h1
-
-    };
 
 }
 
@@ -879,144 +865,68 @@ function evaluateHigherTimeframeAgreement() {
    SWING DETECTION
    ========================================================= */
 
-function isSwingHigh(
+function findSwingHighs(
+
     candles,
-    index,
+
     lookback = 2
+
 ) {
 
-    const current =
-        candles[index].high;
+    const swings = [];
+
 
     for (
-        let i =
-            index - lookback;
-        i <=
-            index + lookback;
-        i++
-    ) {
 
-        if (
-            i < 0 ||
-            i >= candles.length ||
-            i === index
-        ) {
-
-            continue;
-
-        }
-
-        if (
-            candles[i].high >=
-            current
-        ) {
-
-            return false;
-
-        }
-
-    }
-
-    return true;
-
-}
-
-
-function isSwingLow(
-    candles,
-    index,
-    lookback = 2
-) {
-
-    const current =
-        candles[index].low;
-
-    for (
-        let i =
-            index - lookback;
-        i <=
-            index + lookback;
-        i++
-    ) {
-
-        if (
-            i < 0 ||
-            i >= candles.length ||
-            i === index
-        ) {
-
-            continue;
-
-        }
-
-        if (
-            candles[i].low <=
-            current
-        ) {
-
-            return false;
-
-        }
-
-    }
-
-    return true;
-
-}
-
-
-/* =========================================================
-   FIND SWINGS
-   ========================================================= */
-
-function findSwings(
-    candles,
-    lookback = 2
-) {
-
-    const highs = [];
-
-    const lows = [];
-
-    for (
         let i = lookback;
+
         i < candles.length - lookback;
+
         i++
+
     ) {
 
-        if (
-            isSwingHigh(
-                candles,
-                i,
-                lookback
-            )
+        let isSwing = true;
+
+
+        for (
+
+            let j = 1;
+
+            j <= lookback;
+
+            j++
+
         ) {
 
-            highs.push({
+            if (
 
-                index: i,
+                candles[i].high <=
 
-                price:
-                    candles[i].high
+                    candles[i - j].high ||
 
-            });
+                candles[i].high <=
+
+                    candles[i + j].high
+
+            ) {
+
+                isSwing = false;
+
+                break;
+
+            }
 
         }
 
-        if (
-            isSwingLow(
-                candles,
-                i,
-                lookback
-            )
-        ) {
 
-            lows.push({
+        if (isSwing) {
+
+            swings.push({
 
                 index: i,
 
-                price:
-                    candles[i].low
+                price: candles[i].high
 
             });
 
@@ -1024,10 +934,83 @@ function findSwings(
 
     }
 
-    return {
-        highs,
-        lows
-    };
+
+    return swings;
+
+}
+
+
+function findSwingLows(
+
+    candles,
+
+    lookback = 2
+
+) {
+
+    const swings = [];
+
+
+    for (
+
+        let i = lookback;
+
+        i < candles.length - lookback;
+
+        i++
+
+    ) {
+
+        let isSwing = true;
+
+
+        for (
+
+            let j = 1;
+
+            j <= lookback;
+
+            j++
+
+        ) {
+
+            if (
+
+                candles[i].low >=
+
+                    candles[i - j].low ||
+
+                candles[i].low >=
+
+                    candles[i + j].low
+
+            ) {
+
+                isSwing = false;
+
+                break;
+
+            }
+
+        }
+
+
+        if (isSwing) {
+
+            swings.push({
+
+                index: i,
+
+                price: candles[i].low
+
+            });
+
+        }
+
+    }
+
+
+    return swings;
 
 }
 
@@ -1038,19 +1021,13 @@ function findSwings(
 
 function evaluateStructure(candles) {
 
-    if (
-        !Array.isArray(candles) ||
-        candles.length < 10
-    ) {
+    if (!candles || candles.length < 20) {
 
         return {
 
-            direction: "UNKNOWN",
+            direction: "WAITING",
 
-            status:
-                "STRUCTURE DATA UNAVAILABLE",
-
-            valid: false,
+            status: "STRUCTURE DATA UNAVAILABLE",
 
             swingHigh: null,
 
@@ -1060,116 +1037,109 @@ function evaluateStructure(candles) {
 
     }
 
-    const swings =
-        findSwings(
-            candles,
-            Engine3Config.SWING_LOOKBACK
-        );
 
-    const highs =
-        swings.highs.slice(-3);
+    const highs = findSwingHighs(
 
-    const lows =
-        swings.lows.slice(-3);
+        candles,
 
-    if (
-        highs.length < 2 ||
-        lows.length < 2
-    ) {
+        Engine3Config.SWING_LOOKBACK
+
+    );
+
+
+    const lows = findSwingLows(
+
+        candles,
+
+        Engine3Config.SWING_LOOKBACK
+
+    );
+
+
+    if (highs.length < 2 || lows.length < 2) {
 
         return {
 
-            direction: "UNKNOWN",
+            direction: "WAITING",
 
-            status:
-                "WAITING FOR SWINGS",
-
-            valid: false,
+            status: "WAITING FOR SWINGS",
 
             swingHigh:
+
                 highs.length
+
                     ? highs[highs.length - 1].price
+
                     : null,
 
             swingLow:
+
                 lows.length
+
                     ? lows[lows.length - 1].price
+
                     : null
 
         };
 
     }
 
-    const lastHigh =
-        highs[highs.length - 1].price;
 
-    const previousHigh =
-        highs[highs.length - 2].price;
+    const h1 = highs[highs.length - 2];
 
-    const lastLow =
-        lows[lows.length - 1].price;
+    const h2 = highs[highs.length - 1];
 
-    const previousLow =
-        lows[lows.length - 2].price;
+    const l1 = lows[lows.length - 2];
+
+    const l2 = lows[lows.length - 1];
+
 
     const bullish =
-        lastHigh > previousHigh &&
-        lastLow > previousLow;
+
+        h2.price > h1.price &&
+
+        l2.price > l1.price;
+
 
     const bearish =
-        lastHigh < previousHigh &&
-        lastLow < previousLow;
+
+        h2.price < h1.price &&
+
+        l2.price < l1.price;
+
+
+    let direction = "MIXED";
+
+    let status = "MIXED STRUCTURE";
+
 
     if (bullish) {
 
-        return {
+        direction = "BULLISH";
 
-            direction: "BUY",
-
-            status:
-                "BULLISH STRUCTURE",
-
-            valid: true,
-
-            swingHigh: lastHigh,
-
-            swingLow: lastLow
-
-        };
+        status = "BULLISH STRUCTURE";
 
     }
+
 
     if (bearish) {
 
-        return {
+        direction = "BEARISH";
 
-            direction: "SELL",
-
-            status:
-                "BEARISH STRUCTURE",
-
-            valid: true,
-
-            swingHigh: lastHigh,
-
-            swingLow: lastLow
-
-        };
+        status = "BEARISH STRUCTURE";
 
     }
 
+
     return {
 
-        direction: "NEUTRAL",
+        direction,
 
-        status:
-            "MIXED STRUCTURE",
+        status,
 
-        valid: false,
+        swingHigh: h2.price,
 
-        swingHigh: lastHigh,
-
-        swingLow: lastLow
+        swingLow: l2.price
 
     };
 
@@ -1177,280 +1147,167 @@ function evaluateStructure(candles) {
 
 
 /* =========================================================
-   MULTI-TIMEFRAME STRUCTURE
-   ========================================================= */
-
-function evaluateMultiTimeframeStructure() {
-
-    const m15 =
-        evaluateStructure(
-            MarketState.candles.M15
-        );
-
-    const m5 =
-        evaluateStructure(
-            MarketState.candles.M5
-        );
-
-    return {
-
-        m15,
-
-        m5,
-
-        valid:
-            m15.valid &&
-            m5.valid &&
-            m15.direction ===
-            m5.direction
-
-    };
-
-}
-
-
-/* =========================================================
-   MOMENTUM EVALUATION
-   ========================================================= */
-
-function evaluateMomentum(
-    candles,
-    direction
-) {
-
-    if (
-        !candles ||
-        candles.length <=
-            Engine3Config.MOMENTUM_LOOKBACK
-    ) {
-
-        return {
-
-            valid: false,
-
-            status:
-                "MOMENTUM UNAVAILABLE",
-
-            momentum: null
-
-        };
-
-    }
-
-    const closes =
-        candles.map(
-            c => c.close
-        );
-
-    const momentum =
-        calculateMomentum(
-            closes,
-            Engine3Config.MOMENTUM_LOOKBACK
-        );
-
-    if (!finite(momentum)) {
-
-        return {
-
-            valid: false,
-
-            status:
-                "MOMENTUM UNAVAILABLE",
-
-            momentum: null
-
-        };
-
-    }
-
-    if (direction === "BUY") {
-
-        return {
-
-            valid:
-                momentum > 0,
-
-            status:
-                momentum > 0
-                    ? "BULLISH"
-                    : "BEARISH",
-
-            momentum
-
-        };
-
-    }
-
-    if (direction === "SELL") {
-
-        return {
-
-            valid:
-                momentum < 0,
-
-            status:
-                momentum < 0
-                    ? "BEARISH"
-                    : "BULLISH",
-
-            momentum
-
-        };
-
-    }
-
-    return {
-
-        valid: false,
-
-        status: "NO DIRECTION",
-
-        momentum
-
-    };
-
-}
-
-
-/* =========================================================
-   ELITE RSI PROTECTION
+   RSI PROTECTION
    ========================================================= */
 
 function getEliteRSIProtection(
+
     rsi,
+
     direction
+
 ) {
 
     if (
+
         rsi === null ||
+
         !Number.isFinite(rsi)
+
     ) {
 
         return {
 
             valid: false,
 
-            status:
-                "RSI DATA UNAVAILABLE",
+            status: "RSI DATA UNAVAILABLE",
 
-            reason:
-                "RSI data unavailable"
+            reason: "RSI data unavailable"
 
         };
 
     }
 
-
-    /* HARD BUY PROTECTION */
-
-    if (
-        direction === "BUY" &&
-        rsi >=
-            Engine3Config.RSI_OVERBOUGHT
-    ) {
-
-        return {
-
-            valid: false,
-
-            status:
-                "BUY BLOCKED — OVERBOUGHT",
-
-            reason:
-                "RSI is too high for a fresh BUY"
-
-        };
-
-    }
-
-
-    /* HARD SELL PROTECTION */
-
-    if (
-        direction === "SELL" &&
-        rsi <=
-            Engine3Config.RSI_OVERSOLD
-    ) {
-
-        return {
-
-            valid: false,
-
-            status:
-                "SELL BLOCKED — OVERSOLD",
-
-            reason:
-                "RSI is too low for a fresh SELL"
-
-        };
-
-    }
-
-
-    /* BUY SAFETY ZONE */
 
     if (direction === "BUY") {
 
-        const valid =
+        if (
+
             rsi >=
-                Engine3Config.RSI_BUY_MIN &&
-            rsi <=
-                Engine3Config.RSI_BUY_MAX;
+
+            Engine3Config.RSI_OVERBOUGHT
+
+        ) {
+
+            return {
+
+                valid: false,
+
+                status: "BUY BLOCKED - RSI OVERBOUGHT",
+
+                reason: "RSI >= 70"
+
+            };
+
+        }
+
+
+        if (
+
+            rsi <
+
+                Engine3Config.RSI_BUY_MIN ||
+
+            rsi >
+
+                Engine3Config.RSI_BUY_MAX
+
+        ) {
+
+            return {
+
+                valid: true,
+
+                status: "BUY RSI CAUTION",
+
+                reason: "RSI outside preferred BUY zone"
+
+            };
+
+        }
+
 
         return {
 
-            valid,
+            valid: true,
 
-            status:
-                valid
-                    ? "BUY RSI SAFE"
-                    : "BUY RSI WEAK",
+            status: "RSI IN TRADE ZONE",
 
-            reason:
-                valid
-                    ? "RSI within BUY safety zone"
-                    : "RSI outside BUY safety zone"
+            reason: "BUY RSI safe"
 
         };
 
     }
 
-
-    /* SELL SAFETY ZONE */
 
     if (direction === "SELL") {
 
-        const valid =
-            rsi >=
-                Engine3Config.RSI_SELL_MIN &&
+        if (
+
             rsi <=
-                Engine3Config.RSI_SELL_MAX;
+
+            Engine3Config.RSI_OVERSOLD
+
+        ) {
+
+            return {
+
+                valid: false,
+
+                status: "SELL BLOCKED - RSI OVERSOLD",
+
+                reason: "RSI <= 30"
+
+            };
+
+        }
+
+
+        if (
+
+            rsi <
+
+                Engine3Config.RSI_SELL_MIN ||
+
+            rsi >
+
+                Engine3Config.RSI_SELL_MAX
+
+        ) {
+
+            return {
+
+                valid: true,
+
+                status: "SELL RSI CAUTION",
+
+                reason: "RSI outside preferred SELL zone"
+
+            };
+
+        }
+
 
         return {
 
-            valid,
+            valid: true,
 
-            status:
-                valid
-                    ? "SELL RSI SAFE"
-                    : "SELL RSI WEAK",
+            status: "RSI IN TRADE ZONE",
 
-            reason:
-                valid
-                    ? "RSI within SELL safety zone"
-                    : "RSI outside SELL safety zone"
+            reason: "SELL RSI safe"
 
         };
 
     }
+
 
     return {
 
         valid: false,
 
-        status: "NO DIRECTION",
+        status: "RSI WAITING",
 
-        reason: "No trade direction"
+        reason: "Direction unavailable"
 
     };
 
@@ -1458,40 +1315,281 @@ function getEliteRSIProtection(
 
 
 /* =========================================================
-   A+ REVERSAL
+   RSI OVERBOUGHT / OVERSOLD PROTECTION
    ========================================================= */
 
-function detectAPlusReversal(
-    candles,
+function evaluateRSIProtection(
+
     rsi,
+
     direction
+
 ) {
 
+    if (!Number.isFinite(rsi)) {
+
+        return {
+
+            valid: false,
+
+            status: "PROTECTION UNKNOWN"
+
+        };
+
+    }
+
+
     if (
-        !candles ||
-        candles.length < 5 ||
-        !finite(rsi)
+
+        direction === "BUY" &&
+
+        rsi >= Engine3Config.RSI_OVERBOUGHT
+
     ) {
 
         return {
 
             valid: false,
 
-            status: "NO REVERSAL"
+            status: "BUY BLOCKED - OVERBOUGHT"
 
         };
 
     }
 
-    const last =
-        candles[candles.length - 1];
 
-    const previous =
-        candles[candles.length - 2];
+    if (
+
+        direction === "SELL" &&
+
+        rsi <= Engine3Config.RSI_OVERSOLD
+
+    ) {
+
+        return {
+
+            valid: false,
+
+            status: "SELL BLOCKED - OVERSOLD"
+
+        };
+
+    }
+
+
+    return {
+
+        valid: true,
+
+        status: "PROTECTION PASSED"
+
+    };
+
+}
+
+
+/* =========================================================
+   EMA ALIGNMENT
+   ========================================================= */
+
+function evaluateEMAAlignment(
+
+    indicator,
+
+    direction
+
+) {
+
+    if (
+
+        !indicator ||
+
+        !Number.isFinite(indicator.ema20) ||
+
+        !Number.isFinite(indicator.ema50) ||
+
+        !Number.isFinite(indicator.ema200)
+
+    ) {
+
+        return {
+
+            valid: false,
+
+            status: "EMA DATA UNAVAILABLE"
+
+        };
+
+    }
+
+
+    if (direction === "BUY") {
+
+        const valid =
+
+            indicator.ema20 >
+
+            indicator.ema50 &&
+
+            indicator.ema50 >
+
+            indicator.ema200;
+
+
+        return {
+
+            valid,
+
+            status: valid
+
+                ? "EMA ALIGNED"
+
+                : "EMA MISALIGNED"
+
+        };
+
+    }
+
+
+    if (direction === "SELL") {
+
+        const valid =
+
+            indicator.ema20 <
+
+            indicator.ema50 &&
+
+            indicator.ema50 <
+
+            indicator.ema200;
+
+
+        return {
+
+            valid,
+
+            status: valid
+
+                ? "EMA ALIGNED"
+
+                : "EMA MISALIGNED"
+
+        };
+
+    }
+
+
+    return {
+
+        valid: false,
+
+        status: "EMA WAITING"
+
+    };
+
+}
+
+
+/* =========================================================
+   MOMENTUM
+   ========================================================= */
+
+function evaluateMomentum(
+
+    momentum,
+
+    direction
+
+) {
+
+    if (!Number.isFinite(momentum)) {
+
+        return {
+
+            valid: false,
+
+            status: "MOMENTUM UNAVAILABLE"
+
+        };
+
+    }
+
+
+    if (direction === "BUY") {
+
+        return {
+
+            valid: momentum > 0,
+
+            status:
+
+                momentum > 0
+
+                    ? "MOMENTUM CONFIRMED"
+
+                    : "MOMENTUM AGAINST BUY"
+
+        };
+
+    }
+
+
+    if (direction === "SELL") {
+
+        return {
+
+            valid: momentum < 0,
+
+            status:
+
+                momentum < 0
+
+                    ? "MOMENTUM CONFIRMED"
+
+                    : "MOMENTUM AGAINST SELL"
+
+        };
+
+    }
+
+
+    return {
+
+        valid: false,
+
+        status: "MOMENTUM WAITING"
+
+    };
+
+}
+
+
+/* =========================================================
+   CANDLE QUALITY
+   ========================================================= */
+
+function evaluateCandleQuality(candles) {
+
+    if (!candles || candles.length < 2) {
+
+        return {
+
+            valid: false,
+
+            status: "CANDLE DATA UNAVAILABLE"
+
+        };
+
+    }
+
+
+    const candle = candles[candles.length - 1];
+
 
     const range =
-        last.high -
-        last.low;
+
+        candle.high - candle.low;
+
 
     if (range <= 0) {
 
@@ -1499,76 +1597,38 @@ function detectAPlusReversal(
 
             valid: false,
 
-            status: "NO REVERSAL"
-
-        };
-
-    }
-
-    const bullishRejection =
-        last.close >
-            last.open &&
-        last.low <
-            previous.low &&
-        last.close >
-            (
-                last.low +
-                range * 0.60
-            );
-
-    const bearishRejection =
-        last.close <
-            last.open &&
-        last.high >
-            previous.high &&
-        last.close <
-            (
-                last.high -
-                range * 0.60
-            );
-
-
-    if (
-        direction === "BUY" &&
-        bullishRejection &&
-        rsi < 45
-    ) {
-
-        return {
-
-            valid: true,
-
-            status:
-                "A+ BULLISH REVERSAL"
+            status: "INVALID CANDLE"
 
         };
 
     }
 
 
-    if (
-        direction === "SELL" &&
-        bearishRejection &&
-        rsi > 55
-    ) {
+    const body =
 
-        return {
+        Math.abs(
 
-            valid: true,
+            candle.close -
 
-            status:
-                "A+ BEARISH REVERSAL"
+            candle.open
 
-        };
+        );
 
-    }
+
+    const bodyRatio = body / range;
 
 
     return {
 
-        valid: false,
+        valid: bodyRatio >= 0.45,
 
-        status: "NO A+ REVERSAL"
+        status:
+
+            bodyRatio >= 0.45
+
+                ? "STRONG CANDLE"
+
+                : "WEAK CANDLE"
 
     };
 
@@ -1580,65 +1640,65 @@ function detectAPlusReversal(
    ========================================================= */
 
 function evaluateEMAExtension(
+
     price,
+
     ema20,
-    atr,
-    direction
+
+    atr
+
 ) {
 
     if (
-        !finite(price) ||
-        !finite(ema20) ||
-        !finite(atr) ||
+
+        !Number.isFinite(price) ||
+
+        !Number.isFinite(ema20) ||
+
+        !Number.isFinite(atr) ||
+
         atr <= 0
+
     ) {
 
         return {
 
             valid: false,
 
-            status:
-                "EMA EXTENSION DATA UNAVAILABLE"
+            status: "EMA EXTENSION UNKNOWN"
 
         };
 
     }
+
 
     const distance =
-        Math.abs(
-            price - ema20
-        );
 
-    const extension =
-        distance / atr;
+        Math.abs(price - ema20);
 
-    const tooExtended =
-        extension >
+
+    const maximum =
+
+        atr *
+
         Engine3Config.EMA_EXTENSION_ATR;
 
-    if (tooExtended) {
-
-        return {
-
-            valid: false,
-
-            status:
-                `EXTENDED ${extension.toFixed(2)} ATR`,
-
-            extension
-
-        };
-
-    }
 
     return {
 
-        valid: true,
+        valid: distance <= maximum,
 
         status:
-            `NORMAL ${extension.toFixed(2)} ATR`,
 
-        extension
+            distance <= maximum
+
+                ? "EMA EXTENSION SAFE"
+
+                : "EMA OVEREXTENDED",
+
+        distance,
+
+        maximum
 
     };
 
@@ -1647,105 +1707,15 @@ function evaluateEMAExtension(
 
 /* =========================================================
    DAILY SUPPORT / RESISTANCE
-   =========================================================
-
-   Uses PREVIOUS COMPLETED DAILY CANDLE.
-
-   PDH = Previous Day High
-   PDL = Previous Day Low
-   PDC = Previous Day Close
-
-   Pivot:
-   P = (PDH + PDL + PDC) / 3
-
-   R1 = 2P - PDL
-   R2 = P + (PDH - PDL)
-   R3 = PDH + 2(P - PDL)
-
-   S1 = 2P - PDH
-   S2 = P - (PDH - PDL)
-   S3 = PDL - 2(PDH - P)
-
    ========================================================= */
 
 function calculateDailySupportResistance(
-    dailyCandles,
-    currentPrice
+
+    candles
+
 ) {
 
-    if (
-        !Array.isArray(dailyCandles) ||
-        dailyCandles.length < 2 ||
-        !finite(currentPrice)
-    ) {
-
-        return {
-
-            valid: false,
-
-            pdh: null,
-
-            pdl: null,
-
-            pdc: null,
-
-            pivot: null,
-
-            r1: null,
-
-            r2: null,
-
-            r3: null,
-
-            s1: null,
-
-            s2: null,
-
-            s3: null,
-
-            nearestResistance: null,
-
-            nextResistance: null,
-
-            nearestSupport: null,
-
-            nextSupport: null
-
-        };
-
-    }
-
-
-    /*
-       Twelve Data returns newest
-       records first.
-
-       Therefore index 0 =
-       current/latest daily candle.
-
-       Index 1 =
-       previous completed daily candle.
-    */
-
-    const previousDay =
-        dailyCandles[1];
-
-
-    const pdh =
-        Number(previousDay.high);
-
-    const pdl =
-        Number(previousDay.low);
-
-    const pdc =
-        Number(previousDay.close);
-
-
-    if (
-        !finite(pdh) ||
-        !finite(pdl) ||
-        !finite(pdc)
-    ) {
+    if (!candles || candles.length < 2) {
 
         return {
 
@@ -1756,86 +1726,51 @@ function calculateDailySupportResistance(
     }
 
 
+    const previous =
+
+        candles[candles.length - 2];
+
+
+    const pdh = previous.high;
+
+    const pdl = previous.low;
+
+    const pdc = previous.close;
+
+
     const pivot =
+
         (pdh + pdl + pdc) / 3;
 
 
     const r1 =
-        (2 * pivot) - pdl;
+
+        2 * pivot - pdl;
+
 
     const r2 =
+
         pivot + (pdh - pdl);
 
+
     const r3 =
+
         pdh + 2 * (pivot - pdl);
 
 
     const s1 =
-        (2 * pivot) - pdh;
+
+        2 * pivot - pdh;
+
 
     const s2 =
+
         pivot - (pdh - pdl);
 
+
     const s3 =
+
         pdl - 2 * (pdh - pivot);
-
-
-    const resistanceLevels = [
-
-        {
-            name: "R1",
-            price: r1
-        },
-
-        {
-            name: "R2",
-            price: r2
-        },
-
-        {
-            name: "R3",
-            price: r3
-        }
-
-    ]
-    .filter(
-        level =>
-            finite(level.price) &&
-            level.price > currentPrice
-    )
-    .sort(
-        (a,b) =>
-            a.price - b.price
-    );
-
-
-    const supportLevels = [
-
-        {
-            name: "S1",
-            price: s1
-        },
-
-        {
-            name: "S2",
-            price: s2
-        },
-
-        {
-            name: "S3",
-            price: s3
-        }
-
-    ]
-    .filter(
-        level =>
-            finite(level.price) &&
-            level.price < currentPrice
-    )
-    .sort(
-        (a,b) =>
-            b.price - a.price
-    );
 
 
     return {
@@ -1860,19 +1795,7 @@ function calculateDailySupportResistance(
 
         s2,
 
-        s3,
-
-        nearestResistance:
-            resistanceLevels[0] || null,
-
-        nextResistance:
-            resistanceLevels[1] || null,
-
-        nearestSupport:
-            supportLevels[0] || null,
-
-        nextSupport:
-            supportLevels[1] || null
+        s3
 
     };
 
@@ -1880,107 +1803,126 @@ function calculateDailySupportResistance(
 
 
 /* =========================================================
-   DAILY S/R VALIDATION
-   =========================================================
-
-   IMPORTANT:
-
-   Daily S/R is NOT a universal blocker.
-
-   BUY:
-   - Need enough room to nearest resistance.
-   - Do not BUY directly underneath resistance.
-
-   SELL:
-   - Need enough room to nearest support.
-   - Do not SELL directly above support.
-
+   DAILY S/R LOCATION
    ========================================================= */
 
-function evaluateDailySRValidation(
+function evaluateDailySR(
+
     price,
-    dailySR,
-    direction
+
+    direction,
+
+    sr
+
 ) {
 
     if (
-        !finite(price) ||
-        !dailySR ||
-        !dailySR.valid
+
+        !sr ||
+
+        !sr.valid ||
+
+        !Number.isFinite(price)
+
     ) {
 
         return {
 
             valid: false,
 
-            status:
-                "DAILY S/R UNAVAILABLE",
-
-            reason:
-                "Daily levels unavailable"
+            status: "DAILY S/R UNAVAILABLE"
 
         };
 
     }
 
 
+    const resistanceLevels = [
+
+        sr.r1,
+
+        sr.r2,
+
+        sr.r3,
+
+        sr.pdh
+
+    ]
+
+        .filter(Number.isFinite)
+
+        .filter(level => level > price)
+
+        .sort((a, b) => a - b);
+
+
+    const supportLevels = [
+
+        sr.s1,
+
+        sr.s2,
+
+        sr.s3,
+
+        sr.pdl
+
+    ]
+
+        .filter(Number.isFinite)
+
+        .filter(level => level < price)
+
+        .sort((a, b) => b - a);
+
+
     if (direction === "BUY") {
 
-        const resistance =
-            dailySR.nearestResistance;
+        const nearest = resistanceLevels[0];
 
-        if (
-            !resistance ||
-            !finite(resistance.price)
-        ) {
+
+        if (!Number.isFinite(nearest)) {
 
             return {
 
                 valid: true,
 
-                status:
-                    "BUY — NO NEAR DAILY RESISTANCE",
+                status: "NO NEAR DAILY RESISTANCE",
 
-                reason:
-                    "No calculated daily resistance above price"
+                nearestResistance: null
 
             };
 
         }
 
 
+        const range = sr.pdh - sr.pdl;
+
+
         const room =
-            resistance.price -
-            price;
 
-        const dailyRange =
-            Math.abs(
-                dailySR.pdh -
-                dailySR.pdl
-            );
-
-        const minimumRoom =
-            dailyRange *
-            Engine3Config
-                .DAILY_SR_BUFFER_PERCENT;
+            nearest - price;
 
 
-        if (room <= minimumRoom) {
+        const buffer =
+
+            range *
+
+            Engine3Config.DAILY_SR_BUFFER_PERCENT;
+
+
+        if (room <= buffer) {
 
             return {
 
                 valid: false,
 
-                status:
-                    `BUY TOO CLOSE TO ${resistance.name}`,
+                status: "NEAR OPPOSING ZONE",
 
-                reason:
-                    "Insufficient room before daily resistance",
+                nearestResistance: nearest,
 
-                level:
-                    resistance.price,
+                nextResistance:
 
-                room
+                    resistanceLevels[1] || null
 
             };
 
@@ -1991,16 +1933,13 @@ function evaluateDailySRValidation(
 
             valid: true,
 
-            status:
-                `BUY — ROOM TO ${resistance.name}`,
+            status: "DAILY S/R VALID",
 
-            reason:
-                "Enough room before daily resistance",
+            nearestResistance: nearest,
 
-            level:
-                resistance.price,
+            nextResistance:
 
-            room
+                resistanceLevels[1] || null
 
         };
 
@@ -2009,61 +1948,52 @@ function evaluateDailySRValidation(
 
     if (direction === "SELL") {
 
-        const support =
-            dailySR.nearestSupport;
+        const nearest = supportLevels[0];
 
-        if (
-            !support ||
-            !finite(support.price)
-        ) {
+
+        if (!Number.isFinite(nearest)) {
 
             return {
 
                 valid: true,
 
-                status:
-                    "SELL — NO NEAR DAILY SUPPORT",
+                status: "NO NEAR DAILY SUPPORT",
 
-                reason:
-                    "No calculated daily support below price"
+                nearestSupport: null
 
             };
 
         }
 
 
+        const range = sr.pdh - sr.pdl;
+
+
         const room =
-            price -
-            support.price;
 
-        const dailyRange =
-            Math.abs(
-                dailySR.pdh -
-                dailySR.pdl
-            );
-
-        const minimumRoom =
-            dailyRange *
-            Engine3Config
-                .DAILY_SR_BUFFER_PERCENT;
+            price - nearest;
 
 
-        if (room <= minimumRoom) {
+        const buffer =
+
+            range *
+
+            Engine3Config.DAILY_SR_BUFFER_PERCENT;
+
+
+        if (room <= buffer) {
 
             return {
 
                 valid: false,
 
-                status:
-                    `SELL TOO CLOSE TO ${support.name}`,
+                status: "NEAR OPPOSING ZONE",
 
-                reason:
-                    "Insufficient room before daily support",
+                nearestSupport: nearest,
 
-                level:
-                    support.price,
+                nextSupport:
 
-                room
+                    supportLevels[1] || null
 
             };
 
@@ -2074,16 +2004,13 @@ function evaluateDailySRValidation(
 
             valid: true,
 
-            status:
-                `SELL — ROOM TO ${support.name}`,
+            status: "DAILY S/R VALID",
 
-            reason:
-                "Enough room before daily support",
+            nearestSupport: nearest,
 
-            level:
-                support.price,
+            nextSupport:
 
-            room
+                supportLevels[1] || null
 
         };
 
@@ -2094,7 +2021,7 @@ function evaluateDailySRValidation(
 
         valid: false,
 
-        status: "NO DIRECTION"
+        status: "S/R WAITING"
 
     };
 
@@ -2102,78 +2029,198 @@ function evaluateDailySRValidation(
 
 
 /* =========================================================
-   STRUCTURAL STOP LOSS
+   DAILY S/R DISPLAY
    ========================================================= */
 
-function calculateStructuralSL(
-    candles,
-    direction,
-    entry,
-    atr
-) {
+function updateSRDisplay(sr) {
 
-    if (
-        !candles ||
-        candles.length < 5 ||
-        !finite(entry)
-    ) {
+    if (!sr || !sr.valid) {
 
-        return null;
+        setText("resistance1", "—");
+
+        setText("resistance2", "—");
+
+        setText("support1", "—");
+
+        setText("support2", "—");
+
+        return;
 
     }
 
+
+    const resistance = [
+
+        sr.r1,
+
+        sr.r2,
+
+        sr.r3,
+
+        sr.pdh
+
+    ]
+
+        .filter(Number.isFinite)
+
+        .filter(x => x > livePrice)
+
+        .sort((a, b) => a - b);
+
+
+    const support = [
+
+        sr.s1,
+
+        sr.s2,
+
+        sr.s3,
+
+        sr.pdl
+
+    ]
+
+        .filter(Number.isFinite)
+
+        .filter(x => x < livePrice)
+
+        .sort((a, b) => b - a);
+
+
+    setText(
+
+        "resistance1",
+
+        resistance[0]
+
+            ? resistance[0].toFixed(5)
+
+            : "—"
+
+    );
+
+
+    setText(
+
+        "resistance2",
+
+        resistance[1]
+
+            ? resistance[1].toFixed(5)
+
+            : "—"
+
+    );
+
+
+    setText(
+
+        "support1",
+
+        support[0]
+
+            ? support[0].toFixed(5)
+
+            : "—"
+
+    );
+
+
+    setText(
+
+        "support2",
+
+        support[1]
+
+            ? support[1].toFixed(5)
+
+            : "—"
+
+    );
+
+}
+
+
+/* =========================================================
+   STRUCTURAL SL
+   ========================================================= */
+
+function calculateStructuralSL(
+
+    candles,
+
+    direction,
+
+    entry
+
+) {
+
     const structure =
+
         evaluateStructure(candles);
 
 
     if (direction === "BUY") {
 
-        let sl =
-            structure.swingLow;
+        if (
 
-        if (!finite(sl)) {
+            Number.isFinite(
 
-            sl =
-                entry -
-                (atr || 0.0010);
+                structure.swingLow
 
-        }
+            ) &&
 
-        if (sl >= entry) {
+            structure.swingLow < entry
 
-            sl =
-                entry -
-                (atr || 0.0010);
+        ) {
+
+            return structure.swingLow;
 
         }
-
-        return sl;
 
     }
 
 
     if (direction === "SELL") {
 
-        let sl =
-            structure.swingHigh;
+        if (
 
-        if (!finite(sl)) {
+            Number.isFinite(
 
-            sl =
-                entry +
-                (atr || 0.0010);
+                structure.swingHigh
 
-        }
+            ) &&
 
-        if (sl <= entry) {
+            structure.swingHigh > entry
 
-            sl =
-                entry +
-                (atr || 0.0010);
+        ) {
+
+            return structure.swingHigh;
 
         }
 
-        return sl;
+    }
+
+
+    const atr =
+
+        calculateATR(candles, 14);
+
+
+    if (Number.isFinite(atr)) {
+
+        if (direction === "BUY") {
+
+            return entry - atr * 1.5;
+
+        }
+
+
+        if (direction === "SELL") {
+
+            return entry + atr * 1.5;
+
+        }
 
     }
 
@@ -2184,37 +2231,32 @@ function calculateStructuralSL(
 
 
 /* =========================================================
-   REAL DAILY TARGET + R:R
+   REAL TRADE LEVELS
    ========================================================= */
 
 function calculateTradeLevels(
+
     entry,
+
     sl,
+
     direction,
-    dailySR
+
+    sr
+
 ) {
 
     if (
-        !finite(entry) ||
-        !finite(sl) ||
-        !direction
+
+        !Number.isFinite(entry) ||
+
+        !Number.isFinite(sl)
+
     ) {
 
         return {
 
-            valid: false,
-
-            entry: null,
-
-            sl: null,
-
-            tp1: null,
-
-            tp2: null,
-
-            rr: null,
-
-            targetName: null
+            valid: false
 
         };
 
@@ -2222,28 +2264,15 @@ function calculateTradeLevels(
 
 
     const risk =
-        Math.abs(
-            entry - sl
-        );
+
+        Math.abs(entry - sl);
 
 
     if (risk <= 0) {
 
         return {
 
-            valid: false,
-
-            entry,
-
-            sl,
-
-            tp1: null,
-
-            tp2: null,
-
-            rr: null,
-
-            targetName: null
+            valid: false
 
         };
 
@@ -2254,209 +2283,80 @@ function calculateTradeLevels(
 
     let tp2 = null;
 
-    let targetName = null;
-
-    let secondTargetName = null;
-
-
-    /* =====================================================
-       BUY
-       ===================================================== */
 
     if (direction === "BUY") {
 
-        if (
-            dailySR &&
-            dailySR.nearestResistance
-        ) {
+        const levels = [
 
-            tp1 =
-                dailySR.nearestResistance.price;
+            sr?.r1,
 
-            targetName =
-                dailySR.nearestResistance.name;
+            sr?.r2,
 
-        }
+            sr?.r3,
 
+            sr?.pdh
 
-        if (
-            dailySR &&
-            dailySR.nextResistance
-        ) {
+        ]
 
-            tp2 =
-                dailySR.nextResistance.price;
+            .filter(Number.isFinite)
 
-            secondTargetName =
-                dailySR.nextResistance.name;
+            .filter(level => level > entry)
 
-        }
+            .sort((a, b) => a - b);
 
 
-        /*
-           If no daily resistance is available,
-           use a 2R fallback target.
+        tp1 = levels[0] || entry + risk * 2;
 
-           This is NOT forced when a daily
-           resistance exists.
-        */
-
-        if (!finite(tp1)) {
-
-            tp1 =
-                entry +
-                risk * 2;
-
-            targetName =
-                "2R FALLBACK";
-
-        }
-
-        if (!finite(tp2)) {
-
-            tp2 =
-                entry +
-                risk * 3;
-
-            secondTargetName =
-                "3R FALLBACK";
-
-        }
-
-
-        if (tp1 <= entry) {
-
-            return {
-
-                valid: false,
-
-                entry,
-
-                sl,
-
-                tp1,
-
-                tp2,
-
-                rr: null,
-
-                targetName,
-
-                secondTargetName
-
-            };
-
-        }
+        tp2 = levels[1] || entry + risk * 3;
 
     }
 
 
-    /* =====================================================
-       SELL
-       ===================================================== */
-
     if (direction === "SELL") {
 
-        if (
-            dailySR &&
-            dailySR.nearestSupport
-        ) {
+        const levels = [
 
-            tp1 =
-                dailySR.nearestSupport.price;
+            sr?.s1,
 
-            targetName =
-                dailySR.nearestSupport.name;
+            sr?.s2,
 
-        }
+            sr?.s3,
 
+            sr?.pdl
 
-        if (
-            dailySR &&
-            dailySR.nextSupport
-        ) {
+        ]
 
-            tp2 =
-                dailySR.nextSupport.price;
+            .filter(Number.isFinite)
 
-            secondTargetName =
-                dailySR.nextSupport.name;
+            .filter(level => level < entry)
 
-        }
+            .sort((a, b) => b - a);
 
 
-        /*
-           If no daily support is available,
-           use a 2R fallback target.
-        */
+        tp1 = levels[0] || entry - risk * 2;
 
-        if (!finite(tp1)) {
-
-            tp1 =
-                entry -
-                risk * 2;
-
-            targetName =
-                "2R FALLBACK";
-
-        }
-
-        if (!finite(tp2)) {
-
-            tp2 =
-                entry -
-                risk * 3;
-
-            secondTargetName =
-                "3R FALLBACK";
-
-        }
-
-
-        if (tp1 >= entry) {
-
-            return {
-
-                valid: false,
-
-                entry,
-
-                sl,
-
-                tp1,
-
-                tp2,
-
-                rr: null,
-
-                targetName,
-
-                secondTargetName
-
-            };
-
-        }
+        tp2 = levels[1] || entry - risk * 3;
 
     }
 
 
     const reward =
-        Math.abs(
-            tp1 -
-            entry
-        );
+
+        Math.abs(tp1 - entry);
 
 
     const rr =
-        reward /
-        risk;
+
+        reward / risk;
 
 
     return {
 
         valid:
-            rr >=
-            Engine3Config.MIN_RR,
+
+            Number.isFinite(rr) &&
+
+            rr >= Engine3Config.MIN_RR,
 
         entry,
 
@@ -2466,11 +2366,11 @@ function calculateTradeLevels(
 
         tp2,
 
-        rr,
+        risk,
 
-        targetName,
+        reward,
 
-        secondTargetName
+        rr
 
     };
 
@@ -2478,92 +2378,186 @@ function calculateTradeLevels(
 
 
 /* =========================================================
-   TRADING SESSION
+   A+ REVERSAL
    ========================================================= */
 
-function getTradingSession() {
+function evaluateAPlusReversal(
 
-    const now =
-        new Date();
+    candles,
 
-    const utcHour =
-        now.getUTCHours();
+    rsi,
 
+    direction
 
-    let name =
-        "OFF / TRANSITION";
-
-    let context =
-        "Low-priority trading period";
-
+) {
 
     if (
-        utcHour >= 7 &&
-        utcHour < 12
+
+        !candles ||
+
+        candles.length < 3 ||
+
+        !Number.isFinite(rsi)
+
     ) {
 
-        name =
-            "LONDON";
+        return {
 
-        context =
-            "European liquidity";
+            valid: false,
+
+            status: "NO A+ REVERSAL"
+
+        };
 
     }
 
-    else if (
-        utcHour >= 12 &&
-        utcHour < 16
-    ) {
 
-        name =
-            "LONDON + NEW YORK";
+    const current =
 
-        context =
-            "Major overlap";
+        candles[candles.length - 1];
+
+
+    const previous =
+
+        candles[candles.length - 2];
+
+
+    const range =
+
+        current.high -
+
+        current.low;
+
+
+    if (range <= 0) {
+
+        return {
+
+            valid: false,
+
+            status: "NO A+ REVERSAL"
+
+        };
 
     }
 
-    else if (
-        utcHour >= 16 &&
-        utcHour < 21
-    ) {
 
-        name =
-            "NEW YORK";
+    const closePosition =
 
-        context =
-            "US liquidity";
+        (current.close - current.low) /
+
+        range;
+
+
+    if (direction === "BUY") {
+
+        const bullish =
+
+            current.close >
+
+            current.open;
+
+
+        const sweptLow =
+
+            current.low <
+
+            previous.low;
+
+
+        const upperClose =
+
+            closePosition >= 0.60;
+
+
+        const rsiCondition =
+
+            rsi < 45;
+
+
+        if (
+
+            bullish &&
+
+            sweptLow &&
+
+            upperClose &&
+
+            rsiCondition
+
+        ) {
+
+            return {
+
+                valid: true,
+
+                status: "A+ BUY REVERSAL"
+
+            };
+
+        }
+
+    }
+
+
+    if (direction === "SELL") {
+
+        const bearish =
+
+            current.close <
+
+            current.open;
+
+
+        const sweptHigh =
+
+            current.high >
+
+            previous.high;
+
+
+        const lowerClose =
+
+            closePosition <= 0.40;
+
+
+        const rsiCondition =
+
+            rsi > 55;
+
+
+        if (
+
+            bearish &&
+
+            sweptHigh &&
+
+            lowerClose &&
+
+            rsiCondition
+
+        ) {
+
+            return {
+
+                valid: true,
+
+                status: "A+ SELL REVERSAL"
+
+            };
+
+        }
 
     }
 
 
     return {
 
-        name,
+        valid: false,
 
-        active:
-            name !==
-            "OFF / TRANSITION",
-
-        context
+        status: "NO A+ REVERSAL"
 
     };
-
-}
-
-
-function updateSessionDisplay() {
-
-    const session =
-        getTradingSession();
-
-    MarketState.session =
-        session;
-
-    setText(
-        "session",
-        session.name
-    );
 
 }
 
@@ -2574,86 +2568,15 @@ function updateSessionDisplay() {
 
 function evaluateNewsBlocker() {
 
-    /*
-       Real economic calendar is not connected yet.
-
-       Therefore the system MUST NOT assume
-       that news is clear.
-
-       This remains a hard blocker.
-    */
-
-    MarketState.news.status =
-        "UNKNOWN";
-
-    MarketState.news.blocked =
-        true;
-
-
     return {
 
         valid: false,
 
-        status:
-            "NEWS UNKNOWN",
+        known: false,
 
-        reason:
-            "Real economic calendar not connected"
+        status: "NEWS NOT CONFIRMED",
 
-    };
-
-}
-
-
-/* =========================================================
-   ENGINE 3 DIRECTION
-   ========================================================= */
-
-function determineEngine3Direction() {
-
-    const higher =
-        evaluateHigherTimeframeAgreement();
-
-
-    if (!higher.valid) {
-
-        return {
-
-            direction: "WAIT",
-
-            reason:
-                "H4 + H1 direction not aligned"
-
-        };
-
-    }
-
-
-    const structure =
-        evaluateMultiTimeframeStructure();
-
-
-    if (!structure.valid) {
-
-        return {
-
-            direction: "WAIT",
-
-            reason:
-                "M15 + M5 structure not aligned"
-
-        };
-
-    }
-
-
-    return {
-
-        direction:
-            higher.h4,
-
-        reason:
-            "Higher timeframe direction aligned"
+        reason: "Economic calendar not connected"
 
     };
 
@@ -2661,380 +2584,269 @@ function determineEngine3Direction() {
 
 
 /* =========================================================
-   ENGINE 1
-   ========================================================= */
-
-function runEngine1() {
-
-    const direction =
-        determineEngine3Direction();
-
-
-    return {
-
-        status:
-            direction.direction ===
-            "WAIT"
-                ? "WAIT"
-                : "ANALYSIS",
-
-        direction:
-            direction.direction,
-
-        reason:
-            "Engine 1 foundation active"
-
-    };
-
-}
-
-
-/* =========================================================
-   ENGINE 2
-   ========================================================= */
-
-function runEngine2() {
-
-    const m5 =
-        MarketState.candles.M5;
-
-
-    if (
-        !m5 ||
-        m5.length < 20
-    ) {
-
-        return {
-
-            status: "WAIT",
-
-            direction: "WAIT",
-
-            reason:
-                "M5 data unavailable"
-
-        };
-
-    }
-
-
-    const direction =
-        getTimeframeDirection(m5);
-
-
-    return {
-
-        status:
-            direction ===
-            "UNKNOWN"
-                ? "WAIT"
-                : "ANALYSIS",
-
-        direction,
-
-        reason:
-            "Engine 2 scalp foundation active"
-
-    };
-
-}
-
-
-/* =========================================================
-   ENGINE 3 — ELITE TRADE GATE
+   ENGINE 3
    ========================================================= */
 
 function evaluateTradeGate() {
 
-    const m5 =
-        MarketState.candles.M5;
+    const h4 = indicators.h4;
+
+    const h1 = indicators.h1;
+
+    const m15 = indicators.m15;
+
+    const m5 = indicators.m5;
 
 
     if (
+
+        !h4 ||
+
+        !h1 ||
+
+        !m15 ||
+
         !m5 ||
-        m5.length < 200
+
+        !Number.isFinite(livePrice)
+
     ) {
 
         return {
 
             decision: "WAIT",
 
-            direction: "WAIT",
+            reason: "MARKET DATA INCOMPLETE",
 
             score: 0,
 
-            reason:
-                "Not enough M5 data",
-
-            valid: false
+            maxScore: 11
 
         };
 
     }
 
 
-    /* =====================================================
-       DIRECTION
-       ===================================================== */
+    const h4Direction =
 
-    const directionResult =
-        determineEngine3Direction();
+        getTimeframeDirection(h4);
 
 
-    const direction =
-        directionResult.direction;
+    const h1Direction =
+
+        getTimeframeDirection(h1);
+
+
+    let direction = null;
 
 
     if (
-        direction !== "BUY" &&
-        direction !== "SELL"
+
+        h4Direction === "BULLISH" &&
+
+        h1Direction === "BULLISH"
+
     ) {
+
+        direction = "BUY";
+
+    }
+
+
+    if (
+
+        h4Direction === "BEARISH" &&
+
+        h1Direction === "BEARISH"
+
+    ) {
+
+        direction = "SELL";
+
+    }
+
+
+    if (!direction) {
+
+        updateEngine3Display({
+
+            decision: "WAIT",
+
+            reason: "H4 + H1 DIRECTION NOT ALIGNED",
+
+            score: 0,
+
+            maxScore: 11
+
+        });
+
 
         return {
 
             decision: "WAIT",
 
-            direction: "WAIT",
+            reason: "H4 + H1 direction not aligned",
 
             score: 0,
 
-            reason:
-                directionResult.reason,
-
-            valid: false,
-
-            directionCheck: false,
-
-            structureCheck: false,
-
-            emaCheck: false,
-
-            rsiCheck: false,
-
-            rsiProtection: {
-                valid: false,
-                status: "PENDING"
-            },
-
-            momentumCheck: false,
-
-            momentum: {
-                valid: false,
-                status: "PENDING"
-            },
-
-            candleCheck: false,
-
-            candle: {
-                valid: false,
-                quality: "PENDING"
-            },
-
-            extensionCheck: false,
-
-            extension: {
-                valid: false,
-                status: "PENDING"
-            },
-
-            sessionCheck: false,
-
-            session:
-                getTradingSession(),
-
-            srCheck: false,
-
-            srValidation: {
-                valid: false,
-                status: "PENDING"
-            },
-
-            newsCheck: false,
-
-            news: {
-                valid: false,
-                status: "UNKNOWN"
-            },
-
-            slCheck: false,
-
-            rrCheck: false,
-
-            levels: {
-                valid: false
-            },
-
-            reversal: {
-                valid: false,
-                status: "PENDING"
-            }
+            maxScore: 11
 
         };
 
     }
 
 
-    /* =====================================================
-       M5 INDICATORS
-       ===================================================== */
+    const m15Structure =
 
-    const closes =
-        m5.map(
-            c => c.close
-        );
+        evaluateStructure(marketData.m15);
 
 
-    const ema20 =
-        calculateEMA(
-            closes,
-            20
-        );
+    const m5Structure =
 
-    const ema50 =
-        calculateEMA(
-            closes,
-            50
-        );
-
-    const ema200 =
-        calculateEMA(
-            closes,
-            200
-        );
+        evaluateStructure(marketData.m5);
 
 
-    const rsi =
-        calculateRSI(
-            closes,
-            14
-        );
+    const structureConfirmed =
+
+        m15Structure.direction === direction &&
+
+        m5Structure.direction === direction;
 
 
-    const atr =
-        calculateATR(
-            m5,
-            14
-        );
+    const emaCheck =
 
-
-    /* =====================================================
-       CORE CHECKS
-       ===================================================== */
-
-    const momentum =
-        evaluateMomentum(
-            m5,
-            direction
-        );
-
-
-    const lastCandle =
-        m5[m5.length - 1];
-
-
-    const candle =
-        evaluateCandleQuality(
-            lastCandle
-        );
-
-
-    const emaAlignment =
         evaluateEMAAlignment(
-            ema20,
-            ema50,
-            ema200,
+
+            m5,
+
             direction
+
+        );
+
+
+    const rsiCheck =
+
+        getEliteRSIProtection(
+
+            m5.rsi,
+
+            direction
+
         );
 
 
     const rsiProtection =
-        getEliteRSIProtection(
-            rsi,
+
+        evaluateRSIProtection(
+
+            m5.rsi,
+
             direction
+
         );
 
 
-    const extension =
+    const momentumCheck =
+
+        evaluateMomentum(
+
+            m5.momentum,
+
+            direction
+
+        );
+
+
+    const candleCheck =
+
+        evaluateCandleQuality(
+
+            marketData.m5
+
+        );
+
+
+    const extensionCheck =
+
         evaluateEMAExtension(
-            MarketState.livePrice,
-            ema20,
-            atr,
-            direction
+
+            livePrice,
+
+            m5.ema20,
+
+            m5.atr
+
         );
 
 
-    const structure =
-        evaluateMultiTimeframeStructure();
+    const dailyCheck =
+
+        evaluateDailySR(
+
+            livePrice,
+
+            direction,
+
+            dailySR
+
+        );
 
 
-    const session =
-        getTradingSession();
+    const sl =
+
+        calculateStructuralSL(
+
+            marketData.m5,
+
+            direction,
+
+            livePrice
+
+        );
 
 
-    const news =
+    const tradeLevels =
+
+        calculateTradeLevels(
+
+            livePrice,
+
+            sl,
+
+            direction,
+
+            dailySR
+
+        );
+
+
+    const newsCheck =
+
         evaluateNewsBlocker();
 
 
-    const reversal =
-        detectAPlusReversal(
-            m5,
-            rsi,
+    const reversalCheck =
+
+        evaluateAPlusReversal(
+
+            marketData.m5,
+
+            m5.rsi,
+
             direction
+
         );
 
-
-    /* =====================================================
-       DAILY S/R
-       ===================================================== */
-
-    const dailySR =
-        MarketState.dailySR;
-
-
-    const srValidation =
-        evaluateDailySRValidation(
-            MarketState.livePrice,
-            dailySR,
-            direction
-        );
-
-
-    /* =====================================================
-       STRUCTURAL SL
-       ===================================================== */
-
-    const sl =
-        calculateStructuralSL(
-            m5,
-            direction,
-            MarketState.livePrice,
-            atr
-        );
-
-
-    /* =====================================================
-       REAL DAILY TARGET + R:R
-       ===================================================== */
-
-    const levels =
-        calculateTradeLevels(
-            MarketState.livePrice,
-            sl,
-            direction,
-            dailySR
-        );
-
-
-    /* =====================================================
-       SCORE
-       ===================================================== */
 
     let score = 0;
 
 
     if (
-        directionResult.direction ===
-        direction
+
+        h4Direction === direction &&
+
+        h1Direction === direction
+
     ) {
 
         score++;
@@ -3042,295 +2854,190 @@ function evaluateTradeGate() {
     }
 
 
-    if (structure.valid) {
+    if (structureConfirmed) {
 
         score++;
 
     }
 
 
-    if (emaAlignment.valid) {
+    if (emaCheck.valid) {
 
         score++;
 
     }
 
 
-    if (rsiProtection.valid) {
+    if (rsiCheck.valid) {
 
         score++;
 
     }
 
 
-    if (momentum.valid) {
+    if (momentumCheck.valid) {
 
         score++;
 
     }
 
 
-    if (candle.valid) {
+    if (candleCheck.valid) {
 
         score++;
 
     }
 
 
-    if (extension.valid) {
+    if (extensionCheck.valid) {
 
         score++;
 
     }
 
 
-    if (session.active) {
+    if (
+
+        getTradingSession() !== "ASIA"
+
+    ) {
 
         score++;
 
     }
 
 
-    if (srValidation.valid) {
+    if (dailyCheck.valid) {
 
         score++;
 
     }
 
 
-    if (levels.valid) {
+    if (tradeLevels.valid) {
 
         score++;
 
     }
 
 
-    if (reversal.valid) {
+    if (reversalCheck.valid) {
 
         score++;
 
     }
 
 
-    /* =====================================================
-       RESULT OBJECT
-       ===================================================== */
+    const hardBlock =
 
-    const baseResult = {
+        !rsiProtection.valid ||
 
-        decision: "WAIT",
+        !extensionCheck.valid ||
+
+        !newsCheck.known ||
+
+        !dailyCheck.valid ||
+
+        !tradeLevels.valid;
+
+
+    let decision = "WAIT";
+
+    let reason = "A+ SETUP NOT CONFIRMED";
+
+
+    if (hardBlock) {
+
+        decision = "BLOCKED";
+
+        reason =
+
+            !newsCheck.known
+
+                ? "NEWS NOT CONFIRMED"
+
+                : !dailyCheck.valid
+
+                    ? "DAILY S/R BLOCK"
+
+                    : !tradeLevels.valid
+
+                        ? "REAL R:R BELOW 1:2"
+
+                        : !rsiProtection.valid
+
+                            ? "RSI PROTECTION BLOCK"
+
+                            : "EMA EXTENSION BLOCK";
+
+    }
+
+    else if (
+
+        score >=
+
+        Engine3Config.REQUIRED_SCORE
+
+    ) {
+
+        decision = "WAIT";
+
+        reason =
+
+            direction +
+
+            " A+ CONDITIONS PRESENT - NEWS CONFIRMATION REQUIRED";
+
+    }
+
+
+    const result = {
+
+        decision,
+
+        reason,
 
         direction,
 
         score,
 
-        reason:
-            "A+ conditions not confirmed",
+        maxScore: 11,
 
-        valid: false,
+        h4Direction,
 
+        h1Direction,
 
-        directionCheck: true,
+        structureConfirmed,
 
-        structureCheck:
-            structure.valid,
+        emaCheck,
 
-        emaCheck:
-            emaAlignment.valid,
-
-        rsiCheck:
-            rsiProtection.valid,
+        rsiCheck,
 
         rsiProtection,
 
+        momentumCheck,
 
-        momentumCheck:
-            momentum.valid,
+        candleCheck,
 
-        momentum,
+        extensionCheck,
 
+        dailyCheck,
 
-        candleCheck:
-            candle.valid,
+        tradeLevels,
 
-        candle,
+        newsCheck,
 
+        reversalCheck,
 
-        extensionCheck:
-            extension.valid,
-
-        extension,
-
-
-        sessionCheck:
-            session.active,
-
-        session,
-
-
-        srCheck:
-            srValidation.valid,
-
-        srValidation,
-
-
-        newsCheck:
-            news.valid,
-
-        news,
-
-
-        slCheck:
-            finite(sl),
-
-
-        rrCheck:
-            levels.valid,
-
-        levels,
-
-
-        reversal,
-
-
-        dailySR
+        sl
 
     };
 
 
-    /* =====================================================
-       HARD RSI BLOCK
-       ===================================================== */
-
-    if (!rsiProtection.valid) {
-
-        return {
-
-            ...baseResult,
-
-            decision:
-                direction === "BUY"
-                    ? "BLOCKED BUY"
-                    : "BLOCKED SELL",
-
-            reason:
-                rsiProtection.status
-
-        };
-
-    }
+    updateEngine3Display(result);
 
 
-    /* =====================================================
-       HARD EMA EXTENSION BLOCK
-       ===================================================== */
-
-    if (!extension.valid) {
-
-        return {
-
-            ...baseResult,
-
-            decision: "WAIT",
-
-            reason:
-                "EMA extension protection active"
-
-        };
-
-    }
-
-
-    /* =====================================================
-       HARD DAILY S/R LOCATION BLOCK
-       ===================================================== */
-
-    if (!srValidation.valid) {
-
-        return {
-
-            ...baseResult,
-
-            decision: "WAIT",
-
-            reason:
-                srValidation.status
-
-        };
-
-    }
-
-
-    /* =====================================================
-       HARD NEWS BLOCK
-       ===================================================== */
-
-    if (
-        Engine3Config.NEWS_BLOCKER &&
-        !news.valid
-    ) {
-
-        return {
-
-            ...baseResult,
-
-            decision: "WAIT",
-
-            reason:
-                "WAIT — NEWS UNKNOWN"
-
-        };
-
-    }
-
-
-    /* =====================================================
-       HARD REAL R:R BLOCK
-       ===================================================== */
-
-    if (!levels.valid) {
-
-        return {
-
-            ...baseResult,
-
-            decision: "WAIT",
-
-            reason:
-                "Real R:R below minimum 1:2"
-
-        };
-
-    }
-
-
-    /* =====================================================
-       FINAL A+ DECISION
-       ===================================================== */
-
-    const approved =
-        score >=
-        Engine3Config.REQUIRED_SCORE;
-
-
-    return {
-
-        ...baseResult,
-
-        decision:
-            approved
-                ? direction
-                : "WAIT",
-
-        reason:
-            approved
-                ? "A+ conditions confirmed"
-                : "A+ score not reached",
-
-        valid:
-            approved
-
-    };
+    return result;
 
 }
 
@@ -3341,271 +3048,296 @@ function evaluateTradeGate() {
 
 function updateEngine3Display(result) {
 
-    if (!result) return;
+    if (!result) {
+
+        return;
+
+    }
 
 
     setText(
-        "decision",
-        result.decision
+
+        "engine3Decision",
+
+        result.decision || "WAIT"
+
     );
 
 
     setText(
-        "decisionReason",
-        result.reason
+
+        "engine3Reason",
+
+        result.reason || "A+ setup not confirmed"
+
     );
 
 
-    /*
-       REAL SCORE = 11 CONDITIONS
-    */
-
     setText(
+
         "score",
-        `${result.score} / 11`
+
+        `${result.score || 0} / ${result.maxScore || 11}`
+
     );
 
 
-    const scoreFill =
-        document.getElementById(
-            "scoreFill"
-        );
+    setText(
 
+        "dynamicScore",
 
-    if (scoreFill) {
+        `${result.score || 0} / ${result.maxScore || 11}`
 
-        const percentage =
-            Math.min(
-                100,
-                (result.score / 11) *
-                100
-            );
-
-        scoreFill.style.width =
-            percentage + "%";
-
-    }
-
-
-    displayCheck(
-        "checkDirection",
-        result.directionCheck,
-        result.directionCheck
-            ? "PASS"
-            : "FAIL"
     );
 
 
-    displayCheck(
-        "checkStructure",
-        result.structureCheck,
-        result.structureCheck
-            ? "PASS"
-            : "FAIL"
+    setText(
+
+        "h4h1Agreement",
+
+        result.h4Direction &&
+
+        result.h1Direction &&
+
+        result.h4Direction ===
+
+        result.h1Direction
+
+            ? "ALIGNED"
+
+            : "NOT ALIGNED"
+
     );
 
 
-    displayCheck(
-        "checkEma",
-        result.emaCheck,
+    setText(
+
+        "structureCheck",
+
+        result.structureConfirmed
+
+            ? "CONFIRMED"
+
+            : "NOT CONFIRMED"
+
+    );
+
+
+    setText(
+
+        "emaCheck",
+
         result.emaCheck
-            ? "PASS"
-            : "FAIL"
+
+            ? result.emaCheck.status
+
+            : "WAITING"
+
     );
 
 
-    displayCheck(
-        "checkRsi",
-        result.rsiCheck,
+    setText(
+
+        "rsiSafety",
+
         result.rsiCheck
-            ? "SAFE"
-            : "FAIL"
+
+            ? result.rsiCheck.status
+
+            : "WAITING"
+
     );
 
 
-    displayCheck(
-        "checkRsiProtection",
-        result.rsiProtection?.valid,
-        result.rsiProtection?.status ||
-            "PENDING"
+    setText(
+
+        "rsiProtection",
+
+        result.rsiProtection
+
+            ? result.rsiProtection.status
+
+            : "WAITING"
+
     );
 
 
-    displayCheck(
-        "checkMomentum",
-        result.momentumCheck,
-        result.momentum?.status ||
-            "PENDING"
+    setText(
+
+        "momentumCheck",
+
+        result.momentumCheck
+
+            ? result.momentumCheck.status
+
+            : "WAITING"
+
     );
 
 
-    displayCheck(
-        "checkCandle",
-        result.candleCheck,
-        result.candle?.quality ||
-            "PENDING"
+    setText(
+
+        "candleQuality",
+
+        result.candleCheck
+
+            ? result.candleCheck.status
+
+            : "WAITING"
+
     );
 
 
-    displayCheck(
-        "checkExtension",
-        result.extensionCheck,
-        result.extension?.status ||
-            "PENDING"
+    setText(
+
+        "emaExtension",
+
+        result.extensionCheck
+
+            ? result.extensionCheck.status
+
+            : "WAITING"
+
     );
 
 
-    displayCheck(
-        "checkSession",
-        true,
-        result.session?.name ||
-            "CONTEXT"
+    setText(
+
+        "sessionContext",
+
+        getTradingSession()
+
     );
 
 
-    displayCheck(
-        "checkSr",
-        result.srCheck,
-        result.srValidation?.status ||
-            "PENDING"
+    setText(
+
+        "srValidation",
+
+        result.dailyCheck
+
+            ? result.dailyCheck.status
+
+            : "WAITING"
+
     );
 
 
-    displayCheck(
-        "checkNews",
-        result.newsCheck,
-        result.news?.status ||
-            "UNKNOWN"
+    setText(
+
+        "newsBlocker",
+
+        result.newsCheck
+
+            ? result.newsCheck.status
+
+            : "NEWS NOT CONFIRMED"
+
     );
 
 
-    displayCheck(
-        "checkSl",
-        result.slCheck,
-        result.slCheck
-            ? "READY"
-            : "PENDING"
+    setText(
+
+        "structuralSL",
+
+        Number.isFinite(result.sl)
+
+            ? result.sl.toFixed(5)
+
+            : "—"
+
     );
 
 
-    displayCheck(
-        "checkRr",
-        result.rrCheck,
-        finite(result.levels?.rr)
-            ? `1:${result.levels.rr.toFixed(2)}`
-            : "PENDING"
+    setText(
+
+        "realRR",
+
+        result.tradeLevels &&
+
+        Number.isFinite(result.tradeLevels.rr)
+
+            ? result.tradeLevels.rr.toFixed(2)
+
+            : "—"
+
     );
 
 
-    displayCheck(
-        "checkReversal",
-        result.reversal?.valid,
-        result.reversal?.status ||
-            "NO REVERSAL"
+    setText(
+
+        "aplusReversal",
+
+        result.reversalCheck
+
+            ? result.reversalCheck.status
+
+            : "NO A+ REVERSAL"
+
     );
 
 
-    if (result.levels) {
+    if (
+
+        result.tradeLevels
+
+    ) {
 
         setText(
-            "riskEntry",
-            formatPrice(
-                result.levels.entry
-            )
+
+            "entryPrice",
+
+            result.tradeLevels.entry
+
+                .toFixed(5)
+
         );
 
 
         setText(
-            "riskSl",
-            formatPrice(
-                result.levels.sl
-            )
+
+            "riskSL",
+
+            result.tradeLevels.sl
+
+                .toFixed(5)
+
         );
 
 
         setText(
-            "riskTp1",
-            formatPrice(
-                result.levels.tp1
-            )
+
+            "tp1",
+
+            result.tradeLevels.tp1
+
+                .toFixed(5)
+
         );
 
 
         setText(
-            "riskTp2",
-            formatPrice(
-                result.levels.tp2
-            )
+
+            "tp2",
+
+            result.tradeLevels.tp2
+
+                .toFixed(5)
+
         );
 
 
         setText(
-            "riskRr",
-            finite(result.levels.rr)
-                ? `1:${result.levels.rr.toFixed(2)}`
-                : "—"
+
+            "actualRR",
+
+            "1:" +
+
+            result.tradeLevels.rr
+
+                .toFixed(2)
+
         );
-
-    }
-
-}
-
-
-/* =========================================================
-   CHECKLIST DISPLAY
-   ========================================================= */
-
-function displayCheck(
-    prefix,
-    valid,
-    status
-) {
-
-    const icon =
-        document.getElementById(
-            prefix + "Icon"
-        );
-
-
-    const statusEl =
-        document.getElementById(
-            prefix + "Status"
-        );
-
-
-    if (icon) {
-
-        icon.textContent =
-            valid
-                ? "✓"
-                : "×";
-
-
-        icon.style.color =
-            valid
-                ? "#00e59a"
-                : "#ff405d";
-
-
-        icon.style.borderColor =
-            valid
-                ? "#087c5c"
-                : "#8b2436";
-
-    }
-
-
-    if (statusEl) {
-
-        statusEl.textContent =
-            status ||
-            "PENDING";
-
-
-        statusEl.style.color =
-            valid
-                ? "#00e59a"
-                : "#ffc83d";
 
     }
 
@@ -3616,758 +3348,366 @@ function displayCheck(
    TIMEFRAME DISPLAY
    ========================================================= */
 
-function updateTimeframeDisplays() {
+function updateTimeframeDisplay(
 
-    const h4 =
-        evaluateStructure(
-            MarketState.candles.H4
-        );
+    timeframe,
 
+    candles,
 
-    const h1 =
-        evaluateStructure(
-            MarketState.candles.H1
-        );
+    indicator
 
+) {
 
-    const m15 =
-        evaluateStructure(
-            MarketState.candles.M15
-        );
-
-
-    const m5 =
-        evaluateStructure(
-            MarketState.candles.M5
-        );
-
-
-    const h4Direction =
-        getTimeframeDirection(
-            MarketState.candles.H4
-        );
-
-
-    const h1Direction =
-        getTimeframeDirection(
-            MarketState.candles.H1
-        );
-
-
-    const m15Direction =
-        getTimeframeDirection(
-            MarketState.candles.M15
-        );
-
-
-    const m5Direction =
-        getTimeframeDirection(
-            MarketState.candles.M5
-        );
-
-
-    setText(
-        "h4Direction",
-        h4Direction
-    );
-
-
-    setText(
-        "h4Structure",
-        h4.status
-    );
-
-
-    setText(
-        "h4High",
-        formatPrice(
-            h4.swingHigh
-        )
-    );
-
-
-    setText(
-        "h4Low",
-        formatPrice(
-            h4.swingLow
-        )
-    );
-
-
-    setText(
-        "h1Direction",
-        h1Direction
-    );
-
-
-    setText(
-        "h1Structure",
-        h1.status
-    );
-
-
-    setText(
-        "h1High",
-        formatPrice(
-            h1.swingHigh
-        )
-    );
-
-
-    setText(
-        "h1Low",
-        formatPrice(
-            h1.swingLow
-        )
-    );
-
-
-    setText(
-        "m15Structure",
-        m15.status
-    );
-
-
-    setText(
-        "m15Trend",
-        m15Direction
-    );
-
-
-    const m15Closes =
-        MarketState.candles.M15.map(
-            c => c.close
-        );
-
-
-    const m15Ema20 =
-        calculateEMA(
-            m15Closes,
-            20
-        );
-
-
-    const m15Ema50 =
-        calculateEMA(
-            m15Closes,
-            50
-        );
-
-
-    const m15Ema200 =
-        calculateEMA(
-            m15Closes,
-            200
-        );
-
-
-    const m15Ema =
-        evaluateEMAAlignment(
-            m15Ema20,
-            m15Ema50,
-            m15Ema200,
-            m15Direction
-        );
-
-
-    setText(
-        "m15Ema",
-        m15Ema.status
-    );
-
-
-    setText(
-        "m15Liquidity",
-        "PRICE / VOLUME DATA"
-    );
-
-
-    setText(
-        "m5Structure",
-        m5.status
-    );
-
-
-    const m5Closes =
-        MarketState.candles.M5.map(
-            c => c.close
-        );
-
-
-    const ema20 =
-        calculateEMA(
-            m5Closes,
-            20
-        );
-
-
-    const ema50 =
-        calculateEMA(
-            m5Closes,
-            50
-        );
-
-
-    const ema200 =
-        calculateEMA(
-            m5Closes,
-            200
-        );
-
-
-    const rsi =
-        calculateRSI(
-            m5Closes,
-            14
-        );
-
-
-    const m5Ema =
-        evaluateEMAAlignment(
-            ema20,
-            ema50,
-            ema200,
-            m5Direction
-        );
-
-
-    setText(
-        "m5Ema",
-        m5Ema.status
-    );
-
-
-    setText(
-        "m5Rsi",
-        finite(rsi)
-            ? rsi.toFixed(1)
-            : "—"
-    );
-
-
-    const lastCandle =
-        MarketState.candles.M5[
-            MarketState.candles.M5.length - 1
-        ];
-
-
-    const quality =
-        evaluateCandleQuality(
-            lastCandle
-        );
-
-
-    setText(
-        "m5CandleQuality",
-        quality.quality
-    );
-
-
-    setText(
-        "ema20",
-        formatPrice(ema20)
-    );
-
-
-    setText(
-        "ema50",
-        formatPrice(ema50)
-    );
-
-
-    setText(
-        "ema200",
-        formatPrice(ema200)
-    );
-
-
-    setText(
-        "rsi",
-        finite(rsi)
-            ? rsi.toFixed(1)
-            : "—"
-    );
-
-
-    const momentum =
-        calculateMomentum(
-            m5Closes,
-            Engine3Config
-                .MOMENTUM_LOOKBACK
-        );
-
-
-    setText(
-        "momentum",
-        finite(momentum)
-            ? momentum.toFixed(5)
-            : "—"
-    );
-
-
-    const atr =
-        calculateATR(
-            MarketState.candles.M5,
-            14
-        );
-
-
-    const extension =
-        evaluateEMAExtension(
-            MarketState.livePrice,
-            ema20,
-            atr,
-            m5Direction
-        );
-
-
-    setText(
-        "emaExtension",
-        extension.status
-    );
-
-}
-
-
-/* =========================================================
-   DAILY S/R DISPLAY
-   ========================================================= */
-
-function updateSRDisplay() {
-
-    const sr =
-        MarketState.dailySR;
-
-
-    if (
-        !sr ||
-        !sr.valid
-    ) {
-
-        setText(
-            "resistance1",
-            "—"
-        );
-
-        setText(
-            "resistance2",
-            "—"
-        );
-
-        setText(
-            "support1",
-            "—"
-        );
-
-        setText(
-            "support2",
-            "—"
-        );
-
-        updatePriceDisplay();
+    if (!candles || !indicator) {
 
         return;
 
     }
 
 
-    /*
-       Dashboard has four S/R fields.
+    const structure =
 
-       Display nearest two DAILY
-       resistance levels and nearest
-       two DAILY support levels.
-    */
+        evaluateStructure(candles);
+
+
+    const direction =
+
+        getTimeframeDirection(indicator);
+
+
+    const prefix =
+
+        timeframe.toLowerCase();
+
 
     setText(
-        "resistance1",
-        sr.nearestResistance
-            ? `${sr.nearestResistance.name} ${formatPrice(sr.nearestResistance.price)}`
-            : "—"
+
+        prefix + "Direction",
+
+        direction
+
     );
 
 
     setText(
-        "resistance2",
-        sr.nextResistance
-            ? `${sr.nextResistance.name} ${formatPrice(sr.nextResistance.price)}`
-            : "—"
+
+        prefix + "Structure",
+
+        structure.status
+
     );
 
 
     setText(
-        "support1",
-        sr.nearestSupport
-            ? `${sr.nearestSupport.name} ${formatPrice(sr.nearestSupport.price)}`
+
+        prefix + "RSI",
+
+        Number.isFinite(indicator.rsi)
+
+            ? indicator.rsi.toFixed(2)
+
             : "—"
+
     );
 
 
     setText(
-        "support2",
-        sr.nextSupport
-            ? `${sr.nextSupport.name} ${formatPrice(sr.nextSupport.price)}`
+
+        prefix + "EMA",
+
+        Number.isFinite(indicator.ema20) &&
+
+        Number.isFinite(indicator.ema50)
+
+            ? indicator.ema20 >
+
+              indicator.ema50
+
+                ? "BULLISH"
+
+                : "BEARISH"
+
             : "—"
-    );
 
-
-    updatePriceDisplay();
-
-}
-
-
-/* =========================================================
-   CLOCK
-   ========================================================= */
-
-function updateIndiaClock() {
-
-    const now =
-        new Date();
-
-
-    const formatted =
-        new Intl.DateTimeFormat(
-            "en-IN",
-            {
-
-                timeZone:
-                    "Asia/Kolkata",
-
-                hour:
-                    "2-digit",
-
-                minute:
-                    "2-digit",
-
-                second:
-                    "2-digit",
-
-                hour12:
-                    false
-
-            }
-        ).format(now);
-
-
-    setText(
-        "clock",
-        formatted
     );
 
 }
 
 
 /* =========================================================
-   CHART TIME CONVERSION
+   M5 DISPLAY
    ========================================================= */
 
-function convertCandleTime(datetime) {
+function updateM5Display() {
 
-    if (!datetime) return null;
-
-
-    let text =
-        String(datetime)
-            .trim();
+    const m5 = indicators.m5;
 
 
-    if (
-        !text.includes("T") &&
-        !text.endsWith("Z")
-    ) {
+    if (!m5) {
 
-        text =
-            text.replace(
-                " ",
-                "T"
-            ) + "Z";
+        setText(
+
+            "m5Candle",
+
+            "WAITING"
+
+        );
+
+        return;
 
     }
 
 
-    const timestamp =
-        Math.floor(
-            Date.parse(text) / 1000
+    setText(
+
+        "m5Candle",
+
+        marketData.m5
+
+            ? `${marketData.m5.length} CANDLES`
+
+            : "WAITING"
+
+    );
+
+
+    setText(
+
+        "ema20",
+
+        Number.isFinite(m5.ema20)
+
+            ? m5.ema20.toFixed(5)
+
+            : "—"
+
+    );
+
+
+    setText(
+
+        "ema50",
+
+        Number.isFinite(m5.ema50)
+
+            ? m5.ema50.toFixed(5)
+
+            : "—"
+
+    );
+
+
+    setText(
+
+        "ema200",
+
+        Number.isFinite(m5.ema200)
+
+            ? m5.ema200.toFixed(5)
+
+            : "—"
+
+    );
+
+
+    setText(
+
+        "rsi",
+
+        Number.isFinite(m5.rsi)
+
+            ? m5.rsi.toFixed(2)
+
+            : "—"
+
+    );
+
+
+    setText(
+
+        "momentum",
+
+        Number.isFinite(m5.momentum)
+
+            ? m5.momentum.toFixed(5)
+
+            : "—"
+
+    );
+
+
+    const candleQuality =
+
+        evaluateCandleQuality(
+
+            marketData.m5
+
         );
 
 
-    if (
-        !Number.isFinite(
-            timestamp
-        )
-    ) {
+    setText(
 
-        return null;
+        "candleQualityValue",
 
-    }
+        candleQuality.status
+
+    );
 
 
-    return timestamp;
+    const extension =
+
+        evaluateEMAExtension(
+
+            livePrice,
+
+            m5.ema20,
+
+            m5.atr
+
+        );
+
+
+    setText(
+
+        "emaExtensionValue",
+
+        extension.status
+
+    );
 
 }
 
 
 /* =========================================================
-   CHART INITIALIZATION
+   CHART
    ========================================================= */
 
 function initializeChart() {
 
-    const container =
-        document.getElementById(
-            "chartArea"
-        );
+    try {
+
+        if (
+
+            typeof LightweightCharts ===
+
+            "undefined"
+
+        ) {
+
+            console.warn(
+
+                "Lightweight Charts library unavailable"
+
+            );
+
+            return;
+
+        }
 
 
-    if (!container) {
+        const container =
 
-        console.warn(
-            "Chart container not found."
-        );
-
-        return;
-
-    }
+            getElement("chart");
 
 
-    if (
-        typeof LightweightCharts ===
-        "undefined"
-    ) {
+        if (!container) {
 
-        console.error(
-            "Lightweight Charts library not loaded."
-        );
+            return;
 
-        setText(
-            "chartMessageText",
-            "Chart library failed to load"
-        );
-
-        return;
-
-    }
+        }
 
 
-    if (
-        ChartState.initialized
-    ) {
+        chart =
 
-        return;
+            LightweightCharts.createChart(
 
-    }
+                container,
 
+                {
 
-    const message =
-        document.getElementById(
-            "chartMessage"
-        );
+                    layout: {
 
+                        background: {
 
-    if (message) {
+                            color: "transparent"
 
-        message.style.zIndex =
-            "0";
+                        },
 
-    }
-
-
-    ChartState.chart =
-        LightweightCharts.createChart(
-            container,
-            {
-
-                autoSize: true,
-
-                layout: {
-
-                    background: {
-
-                        type: "solid",
-
-                        color: "#06111b"
+                        textColor: "#cbd5e1"
 
                     },
 
-                    textColor:
-                        "#91afc2"
+                    grid: {
 
-                },
+                        vertLines: {
 
-                grid: {
+                            color: "#172033"
 
-                    vertLines: {
+                        },
 
-                        color:
-                            "rgba(34,83,110,0.18)"
+                        horzLines: {
+
+                            color: "#172033"
+
+                        }
 
                     },
 
-                    horzLines: {
+                    width:
 
-                        color:
-                            "rgba(34,83,110,0.18)"
+                        container.clientWidth,
+
+                    height: 380,
+
+                    timeScale: {
+
+                        timeVisible: true
 
                     }
 
-                },
-
-                crosshair: {
-
-                    mode:
-                        LightweightCharts.CrosshairMode
-                            ? LightweightCharts.CrosshairMode.Normal
-                            : 0
-
-                },
-
-                rightPriceScale: {
-
-                    borderColor:
-                        "#123b56"
-
-                },
-
-                timeScale: {
-
-                    borderColor:
-                        "#123b56",
-
-                    timeVisible:
-                        true,
-
-                    secondsVisible:
-                        false,
-
-                    rightOffset:
-                        5
-
                 }
 
-            }
+            );
+
+
+        candleSeries =
+
+            chart.addCandlestickSeries();
+
+
+        chartInitialized = true;
+
+    }
+
+    catch (error) {
+
+        console.error(
+
+            "Chart initialization error:",
+
+            error
+
         );
 
-
-    ChartState.candleSeries =
-        ChartState.chart.addSeries(
-            LightweightCharts.CandlestickSeries,
-            {
-
-                upColor:
-                    "#00e59a",
-
-                downColor:
-                    "#ff405d",
-
-                borderVisible:
-                    false,
-
-                wickUpColor:
-                    "#00e59a",
-
-                wickDownColor:
-                    "#ff405d"
-
-            }
-        );
-
-
-    ChartState.ema20Series =
-        ChartState.chart.addSeries(
-            LightweightCharts.LineSeries,
-            {
-
-                color:
-                    "#20d9ff",
-
-                lineWidth:
-                    2,
-
-                title:
-                    "EMA 20",
-
-                lastValueVisible:
-                    false,
-
-                priceLineVisible:
-                    false
-
-            }
-        );
-
-
-    ChartState.ema50Series =
-        ChartState.chart.addSeries(
-            LightweightCharts.LineSeries,
-            {
-
-                color:
-                    "#ffc83d",
-
-                lineWidth:
-                    2,
-
-                title:
-                    "EMA 50",
-
-                lastValueVisible:
-                    false,
-
-                priceLineVisible:
-                    false
-
-            }
-        );
-
-
-    ChartState.ema200Series =
-        ChartState.chart.addSeries(
-            LightweightCharts.LineSeries,
-            {
-
-                color:
-                    "#ff9f1c",
-
-                lineWidth:
-                    2,
-
-                title:
-                    "EMA 200",
-
-                lastValueVisible:
-                    false,
-
-                priceLineVisible:
-                    false
-
-            }
-        );
-
-
-    ChartState.initialized =
-        true;
-
-
-    setText(
-        "chartState",
-        "CHART: READY"
-    );
+    }
 
 }
 
 
 /* =========================================================
-   UPDATE LIVE PRICE LINE
+   UPDATE CHART
    ========================================================= */
 
-function updateLivePriceLine() {
+function updateChart(candles) {
 
     if (
-        !ChartState.candleSeries ||
-        !finite(
-            MarketState.livePrice
-        )
+
+        !chartInitialized ||
+
+        !candleSeries ||
+
+        !candles
+
     ) {
 
         return;
@@ -4375,527 +3715,65 @@ function updateLivePriceLine() {
     }
 
 
-    if (
-        ChartState.livePriceLine
-    ) {
+    const data = candles
 
-        try {
+        .map(candle => {
 
-            ChartState.candleSeries
-                .removePriceLine(
-                    ChartState.livePriceLine
+            const timestamp =
+
+                Math.floor(
+
+                    new Date(
+
+                        candle.datetime
+
+                    ).getTime() / 1000
+
                 );
 
-        } catch (error) {
 
-            console.warn(
-                "Could not remove old price line."
-            );
+            return {
 
-        }
+                time: timestamp,
+
+                open: candle.open,
+
+                high: candle.high,
+
+                low: candle.low,
+
+                close: candle.close
+
+            };
+
+        })
+
+        .filter(candle =>
+
+            Number.isFinite(candle.time)
+
+        );
+
+
+    try {
+
+        candleSeries.setData(data);
+
+        chart.timeScale().fitContent();
 
     }
 
+    catch (error) {
 
-    ChartState.livePriceLine =
-        ChartState.candleSeries
-            .createPriceLine({
+        console.error(
 
-                price:
-                    MarketState.livePrice,
+            "Chart update error:",
 
-                color:
-                    "#20d9ff",
+            error
 
-                lineWidth:
-                    1,
-
-                lineStyle:
-                    2,
-
-                axisLabelVisible:
-                    true,
-
-                title:
-                    "LIVE"
-
-            });
-
-}
-
-
-/* =========================================================
-   UPDATE FINANCIAL CHART
-   ========================================================= */
-
-function updateFinancialChart() {
-
-    initializeChart();
-
-
-    if (
-        !ChartState.initialized ||
-        !ChartState.candleSeries
-    ) {
-
-        return;
-
-    }
-
-
-    const candles =
-        MarketState.candles.M5;
-
-
-    if (
-        !Array.isArray(candles) ||
-        candles.length === 0
-    ) {
-
-        setText(
-            "chartMessageText",
-            "Waiting for real EUR/USD candle data"
-        );
-
-        setText(
-            "chartState",
-            "DATA: WAITING"
-        );
-
-        return;
-
-    }
-
-
-    const chartCandles = [];
-
-
-    for (
-        const candle of candles
-    ) {
-
-        const time =
-            candle.chartTime ||
-            convertCandleTime(
-                candle.datetime
-            );
-
-
-        if (!time) continue;
-
-
-        if (
-            !finite(candle.open) ||
-            !finite(candle.high) ||
-            !finite(candle.low) ||
-            !finite(candle.close)
-        ) {
-
-            continue;
-
-        }
-
-
-        chartCandles.push({
-
-            time,
-
-            open:
-                Number(candle.open),
-
-            high:
-                Number(candle.high),
-
-            low:
-                Number(candle.low),
-
-            close:
-                Number(candle.close)
-
-        });
-
-    }
-
-
-    chartCandles.sort(
-        (a,b) =>
-            a.time - b.time
-    );
-
-
-    const uniqueCandles = [];
-
-
-    for (
-        const candle of chartCandles
-    ) {
-
-        const previous =
-            uniqueCandles[
-                uniqueCandles.length - 1
-            ];
-
-
-        if (
-            previous &&
-            previous.time ===
-                candle.time
-        ) {
-
-            uniqueCandles[
-                uniqueCandles.length - 1
-            ] = candle;
-
-        } else {
-
-            uniqueCandles.push(
-                candle
-            );
-
-        }
-
-    }
-
-
-    if (
-        !uniqueCandles.length
-    ) {
-
-        setText(
-            "chartMessageText",
-            "No valid candle data received"
-        );
-
-        setText(
-            "chartState",
-            "DATA: INVALID"
-        );
-
-        return;
-
-    }
-
-
-    ChartState.candleSeries.setData(
-        uniqueCandles
-    );
-
-
-    const candlesWithChartTime =
-        candles
-            .map(
-                c => ({
-                    ...c,
-
-                    chartTime:
-                        c.chartTime ||
-                        convertCandleTime(
-                            c.datetime
-                        )
-
-                })
-            )
-            .filter(
-                c =>
-                    c.chartTime &&
-                    finite(c.close)
-            )
-            .sort(
-                (a,b) =>
-                    a.chartTime -
-                    b.chartTime
-            );
-
-
-    const ema20Data =
-        calculateEMASeries(
-            candlesWithChartTime,
-            20
-        );
-
-
-    const ema50Data =
-        calculateEMASeries(
-            candlesWithChartTime,
-            50
-        );
-
-
-    const ema200Data =
-        calculateEMASeries(
-            candlesWithChartTime,
-            200
-        );
-
-
-    ChartState.ema20Series.setData(
-        ema20Data
-    );
-
-
-    ChartState.ema50Series.setData(
-        ema50Data
-    );
-
-
-    ChartState.ema200Series.setData(
-        ema200Data
-    );
-
-
-    updateLivePriceLine();
-
-
-    ChartState.chart
-        .timeScale()
-        .fitContent();
-
-
-    const message =
-        document.getElementById(
-            "chartMessage"
-        );
-
-
-    if (message) {
-
-        message.style.display =
-            "none";
-
-    }
-
-
-    setText(
-        "chartState",
-        "M5 • LIVE DATA"
-    );
-
-}
-
-
-/* =========================================================
-   TWELVE DATA FETCH
-   ========================================================= */
-
-async function twelveDataFetch(
-    endpoint,
-    params = {}
-) {
-
-    const url =
-        new URL(
-            TWELVE_DATA_BASE +
-            endpoint
-        );
-
-
-    url.searchParams.set(
-        "apikey",
-        TWELVE_DATA_API_KEY
-    );
-
-
-    for (
-        const [key,value]
-        of Object.entries(params)
-    ) {
-
-        url.searchParams.set(
-            key,
-            value
         );
 
     }
-
-
-    const response =
-        await fetch(
-            url.toString()
-        );
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            `HTTP ${response.status}`
-        );
-
-    }
-
-
-    const data =
-        await response.json();
-
-
-    if (
-        data.status === "error" ||
-        data.code
-    ) {
-
-        throw new Error(
-            data.message ||
-            `Twelve Data error ${data.code || ""}`
-        );
-
-    }
-
-
-    return data;
-
-}
-
-
-/* =========================================================
-   LIVE PRICE
-   ========================================================= */
-
-async function fetchLivePrice() {
-
-    const data =
-        await twelveDataFetch(
-            "/price",
-            {
-                symbol: PAIR
-            }
-        );
-
-
-    const price =
-        Number(data.price);
-
-
-    if (!finite(price)) {
-
-        throw new Error(
-            "Invalid live price"
-        );
-
-    }
-
-
-    MarketState.livePrice =
-        price;
-
-
-    MarketState.livePriceTime =
-        new Date();
-
-
-    updatePriceDisplay();
-
-
-    return price;
-
-}
-
-
-/* =========================================================
-   CANDLE FETCH
-   ========================================================= */
-
-async function fetchCandles(
-    interval,
-    outputsize = 250
-) {
-
-    const data =
-        await twelveDataFetch(
-            "/time_series",
-            {
-
-                symbol:
-                    PAIR,
-
-                interval:
-                    interval,
-
-                outputsize:
-                    outputsize,
-
-                format:
-                    "JSON"
-
-            }
-        );
-
-
-    if (
-        !data.values ||
-        !Array.isArray(
-            data.values
-        )
-    ) {
-
-        throw new Error(
-            `No candle data for ${interval}`
-        );
-
-    }
-
-
-    const candles =
-        data.values
-            .map(
-                item => {
-
-                    const chartTime =
-                        convertCandleTime(
-                            item.datetime
-                        );
-
-
-                    return {
-
-                        datetime:
-                            item.datetime,
-
-                        chartTime,
-
-                        open:
-                            Number(
-                                item.open
-                            ),
-
-                        high:
-                            Number(
-                                item.high
-                            ),
-
-                        low:
-                            Number(
-                                item.low
-                            ),
-
-                        close:
-                            Number(
-                                item.close
-                            ),
-
-                        volume:
-                            finite(
-                                item.volume
-                            )
-                                ? Number(
-                                    item.volume
-                                )
-                                : null
-
-                    };
-
-                }
-            )
-            .filter(
-                c =>
-                    c.chartTime &&
-                    finite(c.open) &&
-                    finite(c.high) &&
-                    finite(c.low) &&
-                    finite(c.close)
-            )
-            .reverse();
-
-
-    return candles;
 
 }
 
@@ -4908,55 +3786,55 @@ async function loadDailyData() {
 
     try {
 
-        const daily =
+        const candles =
+
             await fetchCandles(
+
                 "1day",
+
                 30
+
             );
 
 
-        if (
-            daily.length >= 2
-        ) {
+        dailySR =
 
-            MarketState.candles.D1 =
-                daily;
+            calculateDailySupportResistance(
 
+                candles
 
-            MarketState.dailySR =
-                calculateDailySupportResistance(
-                    daily,
-                    MarketState.livePrice
-                );
+            );
 
 
-            updateSRDisplay();
+        updateSRDisplay(
 
-        }
+            dailySR
 
-
-        return true;
-
-    } catch (error) {
-
-        console.error(
-            "Daily data error:",
-            error
         );
 
 
-        MarketState.candles.D1 =
-            [];
+        return dailySR;
+
+    }
+
+    catch (error) {
+
+        console.error(
+
+            "Daily data error:",
+
+            error
+
+        );
 
 
-        MarketState.dailySR =
-            null;
+        dailySR = null;
 
 
-        updateSRDisplay();
+        updateSRDisplay(null);
 
 
-        return false;
+        return null;
 
     }
 
@@ -4964,528 +3842,458 @@ async function loadDailyData() {
 
 
 /* =========================================================
-   LOAD MARKET DATA — ROBUST VERSION
+   LOAD MARKET DATA
    ========================================================= */
 
 async function loadMarketData() {
 
-    setText(
-        "chartState",
-        "DATA: LOADING..."
-    );
+    updateIndiaClock();
+
+    updateSession();
 
 
-    /* =====================================================
-       1. LIVE PRICE
-       ===================================================== */
+    /* -----------------------------------------
+       LIVE PRICE
+       ----------------------------------------- */
 
-    try {
-
-        await fetchLivePrice();
-
-    } catch (error) {
-
-        console.error(
-            "Live price error:",
-            error
-        );
-
-        MarketState.connected =
-            false;
-
-        setText(
-            "chartState",
-            "PRICE: ERROR"
-        );
-
-        setText(
-            "chartMessageText",
-            "Live EUR/USD price unavailable"
-        );
-
-        setText(
-            "decision",
-            "WAIT"
-        );
-
-        setText(
-            "decisionReason",
-            "Live price unavailable"
-        );
-
-        return;
-
-    }
+    await fetchLivePrice();
 
 
-    /* =====================================================
-       2. M5 — PRIORITY
-       ===================================================== */
+    /* -----------------------------------------
+       M5
+       ----------------------------------------- */
 
     try {
 
-        const m5 =
+        marketData.m5 =
+
             await fetchCandles(
+
                 "5min",
+
                 250
+
             );
 
 
-        MarketState.candles.M5 =
-            m5;
+        indicators.m5 =
+
+            calculateIndicators(
+
+                marketData.m5
+
+            );
 
 
-        MarketState.connected =
-            true;
+        updateM5Display();
+
+        updateTimeframeDisplay(
+
+            "M5",
+
+            marketData.m5,
+
+            indicators.m5
+
+        );
 
 
-        updateM5Status();
+        updateChart(
 
-    } catch (error) {
+            marketData.m5
+
+        );
+
+    }
+
+    catch (error) {
 
         console.error(
-            "M5 data error:",
+
+            "M5 error:",
+
             error
+
         );
 
+        marketData.m5 = null;
 
-        MarketState.connected =
-            false;
-
-
-        MarketState.candles.M5 =
-            [];
-
+        indicators.m5 = null;
 
         setText(
-            "candleStatus",
-            "ERROR"
+
+            "m5Candle",
+
+            "WAITING"
+
         );
-
-
-        setText(
-            "chartState",
-            "M5: ERROR"
-        );
-
-
-        setText(
-            "decision",
-            "WAIT"
-        );
-
-
-        setText(
-            "decisionReason",
-            "M5 candle data unavailable"
-        );
-
-
-        return;
 
     }
 
 
-    /* =====================================================
-       3. HIGHER TIMEFRAMES
-       ===================================================== */
+    /* -----------------------------------------
+       H4 / H1 / M15
+       ----------------------------------------- */
 
-    const results =
+    const timeframeResults =
+
         await Promise.allSettled([
 
             fetchCandles(
+
                 "4h",
+
                 250
+
             ),
 
             fetchCandles(
+
                 "1h",
+
                 250
+
             ),
 
             fetchCandles(
+
                 "15min",
+
                 250
+
             )
 
         ]);
 
 
     if (
-        results[0].status ===
+
+        timeframeResults[0].status ===
+
         "fulfilled"
+
     ) {
 
-        MarketState.candles.H4 =
-            results[0].value;
+        marketData.h4 =
 
-    } else {
+            timeframeResults[0].value;
 
-        MarketState.candles.H4 =
-            [];
+        indicators.h4 =
 
-        console.error(
-            "H4 data error:",
-            results[0].reason
+            calculateIndicators(
+
+                marketData.h4
+
+            );
+
+        updateTimeframeDisplay(
+
+            "H4",
+
+            marketData.h4,
+
+            indicators.h4
+
         );
 
     }
 
 
     if (
-        results[1].status ===
+
+        timeframeResults[1].status ===
+
         "fulfilled"
+
     ) {
 
-        MarketState.candles.H1 =
-            results[1].value;
+        marketData.h1 =
 
-    } else {
+            timeframeResults[1].value;
 
-        MarketState.candles.H1 =
-            [];
+        indicators.h1 =
 
-        console.error(
-            "H1 data error:",
-            results[1].reason
+            calculateIndicators(
+
+                marketData.h1
+
+            );
+
+        updateTimeframeDisplay(
+
+            "H1",
+
+            marketData.h1,
+
+            indicators.h1
+
         );
 
     }
 
 
     if (
-        results[2].status ===
+
+        timeframeResults[2].status ===
+
         "fulfilled"
+
     ) {
 
-        MarketState.candles.M15 =
-            results[2].value;
+        marketData.m15 =
 
-    } else {
+            timeframeResults[2].value;
 
-        MarketState.candles.M15 =
-            [];
+        indicators.m15 =
 
-        console.error(
-            "M15 data error:",
-            results[2].reason
+            calculateIndicators(
+
+                marketData.m15
+
+            );
+
+        updateTimeframeDisplay(
+
+            "M15",
+
+            marketData.m15,
+
+            indicators.m15
+
         );
 
     }
 
 
-    /* =====================================================
-       4. DAILY DATA
-       ===================================================== */
+    /* -----------------------------------------
+       DAILY
+       ----------------------------------------- */
 
     await loadDailyData();
 
 
-    /* =====================================================
-       5. DASHBOARD UPDATE
-       ===================================================== */
+    /* -----------------------------------------
+       ENGINE 3
+       ----------------------------------------- */
 
-    MarketState.lastUpdate =
-        new Date();
+    evaluateTradeGate();
 
-
-    updatePriceDisplay();
-
-    updateM5Status();
-
-    updateDataStatus();
-
-    updateSessionDisplay();
-
-    updateTimeframeDisplays();
-
-    updateSRDisplay();
-
-    updateFinancialChart();
+}
 
 
-    /* =====================================================
-       6. RUN ENGINE 3
-       ===================================================== */
+/* =========================================================
+   REFRESH BUTTON
+   ========================================================= */
 
-    runAllEngines();
+function setupRefreshButton() {
 
+    const possibleIds = [
 
-    /* =====================================================
-       7. FINAL STATUS
-       ===================================================== */
+        "refresh",
 
-    setText(
-        "chartMessageText",
-        "Real EUR/USD M5 data connected"
-    );
+        "refreshBtn",
 
+        "refreshDashboard",
 
-    const h4Ready =
-        MarketState.candles.H4.length > 0;
+        "refreshData"
 
-    const h1Ready =
-        MarketState.candles.H1.length > 0;
-
-    const m15Ready =
-        MarketState.candles.M15.length > 0;
-
-    const dailyReady =
-        MarketState.candles.D1.length >= 2;
+    ];
 
 
-    if (
-        h4Ready &&
-        h1Ready &&
-        m15Ready &&
-        dailyReady
-    ) {
+    possibleIds.forEach(id => {
 
-        setText(
-            "chartState",
-            "DATA: LIVE • ALL TIMEFRAMES READY"
-        );
+        const button =
 
-    } else {
+            getElement(id);
 
-        setText(
-            "chartState",
-            "DATA: LIVE • SOME TF UNAVAILABLE"
-        );
+
+        if (button) {
+
+            button.addEventListener(
+
+                "click",
+
+                async () => {
+
+                    await loadMarketData();
+
+                }
+
+            );
+
+        }
+
+    });
+
+}
+
+
+/* =========================================================
+   RESIZE CHART
+   ========================================================= */
+
+window.addEventListener(
+
+    "resize",
+
+    () => {
+
+        if (
+
+            chart &&
+
+            getElement("chart")
+
+        ) {
+
+            chart.applyOptions({
+
+                width:
+
+                    getElement("chart")
+
+                        .clientWidth
+
+            });
+
+        }
 
     }
 
-}
+);
 
 
 /* =========================================================
-   RUN ALL ENGINES
+   CLOCK LOOP
    ========================================================= */
 
-function runAllEngines() {
-
-    MarketState.engine1 =
-        runEngine1();
-
-
-    MarketState.engine2 =
-        runEngine2();
-
-
-    MarketState.engine3 =
-        evaluateTradeGate();
-
-
-    updateEngine3Display(
-        MarketState.engine3
-    );
-
-}
-
-
-/* =========================================================
-   BUY ANALYSIS
-   ========================================================= */
-
-function analyzeBuy() {
-
-    if (!MarketState.engine3) {
-
-        refreshDashboard();
-
-        return;
-
-    }
-
-
-    const result =
-        MarketState.engine3;
-
-
-    if (
-        result.direction ===
-        "BUY"
-    ) {
-
-        setText(
-            "decisionReason",
-            result.reason
-        );
-
-    } else {
-
-        setText(
-            "decisionReason",
-            "BUY analysis: conditions not confirmed"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   SELL ANALYSIS
-   ========================================================= */
-
-function analyzeSell() {
-
-    if (!MarketState.engine3) {
-
-        refreshDashboard();
-
-        return;
-
-    }
-
-
-    const result =
-        MarketState.engine3;
-
-
-    if (
-        result.direction ===
-        "SELL"
-    ) {
-
-        setText(
-            "decisionReason",
-            result.reason
-        );
-
-    } else {
-
-        setText(
-            "decisionReason",
-            "SELL analysis: conditions not confirmed"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   ALERT
-   ========================================================= */
-
-function setAlert() {
-
-    alert(
-        "Alert system will be connected in a later module."
-    );
-
-}
-
-
-/* =========================================================
-   REFRESH DASHBOARD
-   ========================================================= */
-
-async function refreshDashboard() {
-
-    await loadMarketData();
-
-}
-
-
-/* =========================================================
-   INITIALIZATION
-   ========================================================= */
-
-function initializeDashboard() {
+function startClock() {
 
     updateIndiaClock();
 
+    updateSession();
+
 
     setInterval(
-        updateIndiaClock,
+
+        () => {
+
+            updateIndiaClock();
+
+            updateSession();
+
+        },
+
         1000
-    );
 
-
-    initializeChart();
-
-
-    loadMarketData();
-
-
-    setInterval(
-        loadMarketData,
-        AUTO_REFRESH_MS
     );
 
 }
 
 
 /* =========================================================
-   GLOBAL EXPORTS
+   MARKET REFRESH LOOP
    ========================================================= */
 
-window.MarketState =
-    MarketState;
+function startMarketRefresh() {
 
+    setInterval(
 
-window.runEngine3 =
-    runAllEngines;
+        () => {
 
+            loadMarketData();
 
-window.evaluateTradeGate =
-    evaluateTradeGate;
+        },
 
+        30000
 
-window.getEliteRSIProtection =
-    getEliteRSIProtection;
+    );
 
-
-window.calculateTradeLevels =
-    calculateTradeLevels;
-
-
-window.calculateDailySupportResistance =
-    calculateDailySupportResistance;
-
-
-window.calculateSupportResistance =
-    calculateDailySupportResistance;
-
-
-window.getTradingSession =
-    getTradingSession;
-
-
-window.refreshDashboard =
-    refreshDashboard;
-
-
-window.analyzeBuy =
-    analyzeBuy;
-
-
-window.analyzeSell =
-    analyzeSell;
-
-
-window.setAlert =
-    setAlert;
+}
 
 
 /* =========================================================
-   START
+   START DASHBOARD
+   ========================================================= */
+
+document.addEventListener(
+
+    "DOMContentLoaded",
+
+    async () => {
+
+        console.log(
+
+            "EUR/USD Sniper Dashboard starting..."
+
+        );
+
+
+        /* IMPORTANT:
+           Clock starts independently.
+           Even if Twelve Data fails,
+           India Time continues working.
+        */
+
+        startClock();
+
+
+        /* Chart */
+
+        initializeChart();
+
+
+        /* Refresh button */
+
+        setupRefreshButton();
+
+
+        /* Initial market load */
+
+        await loadMarketData();
+
+
+        /* Automatic refresh */
+
+        startMarketRefresh();
+
+
+        console.log(
+
+            "EUR/USD Sniper Dashboard ready."
+
+        );
+
+    }
+
+);
+
+
+/* =========================================================
+   SAFETY START
    ========================================================= */
 
 if (
+
     document.readyState ===
-    "loading"
+
+    "interactive" ||
+
+    document.readyState ===
+
+    "complete"
+
 ) {
 
-    document.addEventListener(
-        "DOMContentLoaded",
-        initializeDashboard
-    );
+    startClock();
 
-} else {
+    initializeChart();
 
-    initializeDashboard();
+    setupRefreshButton();
 
 }
+
+
+/* =========================================================
+   END
+   ========================================================= */
