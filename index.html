@@ -267,7 +267,7 @@ body {
 
 .middleGrid {
     display: grid;
-    grid-template-columns: 1.8fr .75fr .75fr;
+    grid-template-columns: .85fr 1.15fr;
     gap: 10px;
     margin-top: 10px;
 }
@@ -296,71 +296,6 @@ body {
 
 .panelBody {
     padding: 12px;
-}
-
-/* =========================================================
-   CHART
-   ========================================================= */
-
-.chartTabs {
-    display: flex;
-    gap: 5px;
-}
-
-.chartTabs span {
-    border: 1px solid var(--border);
-    padding: 5px 9px;
-    border-radius: 4px;
-    font-size: 9px;
-    color: #91afc2;
-}
-
-.chartTabs span.active {
-    color: white;
-    background: #0c4262;
-    border-color: var(--cyan);
-}
-
-.chartArea {
-    height: 370px;
-    position: relative;
-    background:
-        linear-gradient(rgba(34,83,110,.13) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(34,83,110,.13) 1px, transparent 1px);
-    background-size: 50px 50px;
-    overflow: hidden;
-}
-
-.chartMessage {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    color: var(--muted);
-    text-align: center;
-    z-index: 2;
-    pointer-events: none;
-}
-
-.chartMessage strong {
-    color: var(--cyan);
-    font-size: 16px;
-    margin-bottom: 8px;
-}
-
-.chartMessage span {
-    font-size: 11px;
-}
-
-.chartFooter {
-    padding: 8px 12px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    color: var(--muted);
-    font-size: 10px;
 }
 
 /* =========================================================
@@ -639,10 +574,6 @@ body {
         gap: 18px;
     }
 
-    .chartArea {
-        height: 300px;
-    }
-
     .footer {
         flex-direction: column;
         gap: 6px;
@@ -650,12 +581,6 @@ body {
 }
 
 </style>
-
-<!-- =========================================================
-     LIVE FINANCIAL CHART LIBRARY
-     ========================================================= -->
-
-<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 
 </head>
 
@@ -716,7 +641,6 @@ body {
 <nav class="nav">
 
     <span>⌂ Dashboard</span>
-    <span>▣ Charts</span>
     <span>◈ Analysis</span>
     <span>▤ News</span>
     <span>⚙ Settings</span>
@@ -871,64 +795,10 @@ body {
 
 <!-- =======================================================
      MIDDLE
+     CHART REMOVED
      ======================================================= -->
 
 <div class="middleGrid">
-
-
-    <!-- CHART -->
-
-    <div class="panel">
-
-        <div class="panelHeader">
-
-            <div class="panelTitle">
-                EUR/USD • MULTI-TIMEFRAME CHART
-            </div>
-
-            <div class="chartTabs">
-                <span id="tabH4">H4</span>
-                <span id="tabH1">H1</span>
-                <span id="tabM15">M15</span>
-                <span id="tabM5" class="active">M5</span>
-            </div>
-
-        </div>
-
-        <div class="chartArea" id="chartArea">
-
-            <div class="chartMessage" id="chartMessage">
-
-                <strong>LIVE CHART ENGINE</strong>
-
-                <span id="chartMessageText">
-                    Waiting for real EUR/USD candle data
-                </span>
-
-                <span style="margin-top:7px;">
-                    No simulated market data
-                </span>
-
-            </div>
-
-        </div>
-
-        <div class="chartFooter">
-
-            <span>EUR/USD</span>
-
-            <span>
-                Live Price:
-                <b id="chartPrice">—</b>
-            </span>
-
-            <span id="chartState">
-                DATA: WAITING
-            </span>
-
-        </div>
-
-    </div>
 
 
     <!-- KEY INDICATORS -->
@@ -1091,7 +961,9 @@ body {
 
             <div class="check">
 
-                <div class="checkIcon" id="checkRsiIcon">○</div>
+                <div class="checkIcon" id="checkRsiIcon">
+                    ○
+                </div>
 
                 <div class="checkText">
                     RSI Safety
@@ -1133,7 +1005,9 @@ body {
 
             <div class="check">
 
-                <div class="checkIcon" id="checkMomentumIcon">
+                <div
+                    class="checkIcon"
+                    id="checkMomentumIcon">
                     ○
                 </div>
 
@@ -1154,7 +1028,9 @@ body {
 
             <div class="check">
 
-                <div class="checkIcon" id="checkCandleIcon">
+                <div
+                    class="checkIcon"
+                    id="checkCandleIcon">
                     ○
                 </div>
 
@@ -1175,7 +1051,9 @@ body {
 
             <div class="check">
 
-                <div class="checkIcon" id="checkExtensionIcon">
+                <div
+                    class="checkIcon"
+                    id="checkExtensionIcon">
                     ○
                 </div>
 
@@ -1196,7 +1074,9 @@ body {
 
             <div class="check">
 
-                <div class="checkIcon" id="checkSessionIcon">
+                <div
+                    class="checkIcon"
+                    id="checkSessionIcon">
                     ○
                 </div>
 
@@ -1217,7 +1097,9 @@ body {
 
             <div class="check">
 
-                <div class="checkIcon" id="checkSrIcon">
+                <div
+                    class="checkIcon"
+                    id="checkSrIcon">
                     ○
                 </div>
 
@@ -1238,7 +1120,9 @@ body {
 
             <div class="check">
 
-                <div class="checkIcon" id="checkNewsIcon">
+                <div
+                    class="checkIcon"
+                    id="checkNewsIcon">
                     ○
                 </div>
 
@@ -1259,7 +1143,9 @@ body {
 
             <div class="check">
 
-                <div class="checkIcon" id="checkSlIcon">
+                <div
+                    class="checkIcon"
+                    id="checkSlIcon">
                     ○
                 </div>
 
@@ -1280,7 +1166,9 @@ body {
 
             <div class="check">
 
-                <div class="checkIcon" id="checkRrIcon">
+                <div
+                    class="checkIcon"
+                    id="checkRrIcon">
                     ○
                 </div>
 
@@ -1345,7 +1233,6 @@ body {
                 <span style="color:var(--red);">
                     (HIGH IMPACT)
                 </span>
-
             </div>
 
         </div>
