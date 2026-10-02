@@ -14,7 +14,7 @@
    CONFIGURATION
    ========================================================= */
 
-const TWELVE_DATA_API_KEY = "53821bf38bec40e4a88bd1fa06ac32b3";
+const TWELVE_DATA_API_KEY = "YOUR_TWELVE_DATA_API_KEY";
 
 const SYMBOL = "EUR/USD";
 
@@ -256,11 +256,23 @@ async function fetchLivePrice() {
         livePrice = Number(data.price);
 
 
+        /*
+           LIVE PRICE DISPLAY
+
+           Update every possible price field,
+           including the S/R Current Price field.
+        */
+
+        const formattedPrice =
+
+            livePrice.toFixed(5);
+
+
         setText(
 
             "price",
 
-            livePrice.toFixed(5)
+            formattedPrice
 
         );
 
@@ -269,7 +281,7 @@ async function fetchLivePrice() {
 
             "livePrice",
 
-            livePrice.toFixed(5)
+            formattedPrice
 
         );
 
@@ -278,7 +290,7 @@ async function fetchLivePrice() {
 
             "currentPrice",
 
-            livePrice.toFixed(5)
+            formattedPrice
 
         );
 
@@ -287,7 +299,16 @@ async function fetchLivePrice() {
 
             "chartPrice",
 
-            livePrice.toFixed(5)
+            formattedPrice
+
+        );
+
+
+        setText(
+
+            "srCurrentPrice",
+
+            formattedPrice
 
         );
 
@@ -299,6 +320,15 @@ async function fetchLivePrice() {
             "Twelve Data connected • Updated: " +
 
             new Date().toLocaleTimeString("en-IN")
+
+        );
+
+
+        console.log(
+
+            "LIVE EUR/USD PRICE:",
+
+            formattedPrice
 
         );
 
@@ -331,6 +361,24 @@ async function fetchLivePrice() {
             "livePrice",
 
             "Unavailable"
+
+        );
+
+
+        setText(
+
+            "currentPrice",
+
+            "—"
+
+        );
+
+
+        setText(
+
+            "srCurrentPrice",
+
+            "—"
 
         );
 
@@ -472,26 +520,6 @@ async function fetchCandles(
 
 /* =========================================================
    H1 HOURLY SUPPORT & RESISTANCE
-   =========================================================
-
-   NEW METHOD:
-
-   S/R is calculated from H1 hourly candles.
-
-   Resistance:
-   - H1 swing highs above current price
-
-   Support:
-   - H1 swing lows below current price
-
-   R1 = nearest H1 resistance
-   R2 = second nearest H1 resistance
-
-   S1 = nearest H1 support
-   S2 = second nearest H1 support
-
-   We use COMPLETED H1 candles only.
-
    ========================================================= */
 
 function calculateHourlySR(
@@ -528,6 +556,7 @@ function calculateHourlySR(
     */
 
     const lastCompletedIndex =
+
         data.length - 2;
 
 
@@ -636,20 +665,12 @@ function calculateHourlySR(
     }
 
 
-    /*
-       Sort resistance nearest first.
-    */
-
     resistanceLevels.sort(
 
         (a, b) => a - b
 
     );
 
-
-    /*
-       Sort support nearest first.
-    */
 
     supportLevels.sort(
 
@@ -659,7 +680,7 @@ function calculateHourlySR(
 
 
     /*
-       Remove duplicate / extremely close levels.
+       Remove duplicate / very close levels.
     */
 
     function uniqueLevels(levels) {
@@ -686,11 +707,6 @@ function calculateHourlySR(
 
                 result[result.length - 1];
 
-
-            /*
-               EUR/USD levels within roughly
-               3 pips are treated as same zone.
-            */
 
             if (
 
@@ -798,11 +814,10 @@ function updateSRDisplay(sr) {
     /*
        IMPORTANT:
 
-       These values now come from H1 hourly
-       swing highs and swing lows.
+       S/R values are H1 hourly swing levels.
 
-       No daily pivot calculation.
-       No daily filtering.
+       Current Price is ALWAYS taken from
+       the live Twelve Data price.
     */
 
 
@@ -841,13 +856,31 @@ function updateSRDisplay(sr) {
         );
 
 
+        /*
+           CURRENT PRICE FIX
+        */
+
         if (finite(livePrice)) {
+
+            const formattedPrice =
+
+                livePrice.toFixed(5);
+
 
             setText(
 
                 "currentPrice",
 
-                livePrice.toFixed(5)
+                formattedPrice
+
+            );
+
+
+            setText(
+
+                "srCurrentPrice",
+
+                formattedPrice
 
             );
 
@@ -928,16 +961,30 @@ function updateSRDisplay(sr) {
 
 
     /* =====================================================
-       CURRENT PRICE
+       CURRENT PRICE — FIX
        ===================================================== */
 
     if (finite(livePrice)) {
+
+        const formattedPrice =
+
+            livePrice.toFixed(5);
+
 
         setText(
 
             "currentPrice",
 
-            livePrice.toFixed(5)
+            formattedPrice
+
+        );
+
+
+        setText(
+
+            "srCurrentPrice",
+
+            formattedPrice
 
         );
 
@@ -958,6 +1005,15 @@ function updateSRDisplay(sr) {
         "H1 SUPPORT / RESISTANCE:",
 
         sr
+
+    );
+
+
+    console.log(
+
+        "S/R CURRENT PRICE:",
+
+        livePrice
 
     );
 
@@ -1005,6 +1061,40 @@ function updateHourlySR() {
         hourlySR
 
     );
+
+
+    /*
+       FINAL CURRENT PRICE REFRESH
+
+       This guarantees the S/R Current Price
+       is populated after H1 calculation.
+    */
+
+    if (finite(livePrice)) {
+
+        const formattedPrice =
+
+            livePrice.toFixed(5);
+
+
+        setText(
+
+            "currentPrice",
+
+            formattedPrice
+
+        );
+
+
+        setText(
+
+            "srCurrentPrice",
+
+            formattedPrice
+
+        );
+
+    }
 
 
     return hourlySR;
@@ -2944,11 +3034,6 @@ function calculateTradeLevels(
         );
 
 
-    /*
-       Only use fallback if H1 S/R
-       doesn't provide a target.
-    */
-
     if (!finite(tp1)) {
 
         if (direction === "BUY") {
@@ -3057,13 +3142,6 @@ function calculateTradeLevels(
    ========================================================= */
 
 function evaluateNewsBlocker() {
-
-    /*
-       Economic calendar is not connected yet.
-
-       Therefore Engine 3 MUST NOT assume
-       news is clear.
-    */
 
     return {
 
@@ -3375,10 +3453,6 @@ function evaluateTradeGate() {
     }
 
 
-    /* =====================================================
-       H4 + H1 DIRECTION
-       ===================================================== */
-
     const h4Direction =
 
         getTimeframeDirection(h4);
@@ -3439,10 +3513,6 @@ function evaluateTradeGate() {
     }
 
 
-    /* =====================================================
-       M15 + M5 STRUCTURE
-       ===================================================== */
-
     const m15Structure =
 
         getMarketStructure(m15);
@@ -3477,10 +3547,6 @@ function evaluateTradeGate() {
 
         );
 
-
-    /* =====================================================
-       M5 EMA 20 / 50 / 200
-       ===================================================== */
 
     const m5EMA20 =
 
@@ -3535,10 +3601,6 @@ function evaluateTradeGate() {
     }
 
 
-    /* =====================================================
-       RSI
-       ===================================================== */
-
     const rsi =
 
         calculateRSI(
@@ -3560,10 +3622,6 @@ function evaluateTradeGate() {
 
         );
 
-
-    /* =====================================================
-       MOMENTUM
-       ===================================================== */
 
     const momentum =
 
@@ -3597,10 +3655,6 @@ function evaluateTradeGate() {
         );
 
 
-    /* =====================================================
-       CANDLE QUALITY
-       ===================================================== */
-
     const candleQuality =
 
         evaluateCandleQuality(
@@ -3611,10 +3665,6 @@ function evaluateTradeGate() {
 
         );
 
-
-    /* =====================================================
-       ATR + EMA EXTENSION
-       ===================================================== */
 
     const atr =
 
@@ -3642,10 +3692,6 @@ function evaluateTradeGate() {
         );
 
 
-    /* =====================================================
-       SESSION
-       ===================================================== */
-
     const session =
 
         getTradingSession();
@@ -3655,10 +3701,6 @@ function evaluateTradeGate() {
 
         session !== "OFF SESSION";
 
-
-    /* =====================================================
-       STRUCTURAL SL
-       ===================================================== */
 
     const structuralSL =
 
@@ -3673,10 +3715,6 @@ function evaluateTradeGate() {
         );
 
 
-    /* =====================================================
-       H1 SUPPORT / RESISTANCE
-       ===================================================== */
-
     const srCheck =
 
         evaluateHourlySR(
@@ -3689,10 +3727,6 @@ function evaluateTradeGate() {
 
         );
 
-
-    /* =====================================================
-       REAL R:R
-       ===================================================== */
 
     const tradeLevels =
 
@@ -3718,18 +3752,10 @@ function evaluateTradeGate() {
             Engine3Config.MIN_RR;
 
 
-    /* =====================================================
-       NEWS
-       ===================================================== */
-
     const news =
 
         evaluateNewsBlocker();
 
-
-    /* =====================================================
-       A+ REVERSAL
-       ===================================================== */
 
     const reversal =
 
@@ -3743,10 +3769,6 @@ function evaluateTradeGate() {
 
         );
 
-
-    /* =====================================================
-       HARD BLOCKER - RSI
-       ===================================================== */
 
     if (!rsiProtection.valid) {
 
@@ -3775,10 +3797,6 @@ function evaluateTradeGate() {
     }
 
 
-    /* =====================================================
-       HARD BLOCKER - EMA EXTENSION
-       ===================================================== */
-
     if (!extension.valid) {
 
         updateEngine3Display({
@@ -3805,10 +3823,6 @@ function evaluateTradeGate() {
 
     }
 
-
-    /* =====================================================
-       HARD BLOCKER - NEWS
-       ===================================================== */
 
     if (
 
@@ -3843,10 +3857,6 @@ function evaluateTradeGate() {
     }
 
 
-    /* =====================================================
-       HARD BLOCKER - H1 S/R
-       ===================================================== */
-
     if (!srCheck.valid) {
 
         updateEngine3Display({
@@ -3873,10 +3883,6 @@ function evaluateTradeGate() {
 
     }
 
-
-    /* =====================================================
-       HARD BLOCKER - REAL R:R
-       ===================================================== */
 
     if (!rrValid) {
 
@@ -3905,14 +3911,8 @@ function evaluateTradeGate() {
     }
 
 
-    /* =====================================================
-       SCORE
-       ===================================================== */
-
     let score = 0;
 
-
-    /* 1 Direction */
 
     if (direction) {
 
@@ -3921,16 +3921,12 @@ function evaluateTradeGate() {
     }
 
 
-    /* 2 Structure */
-
     if (structureValid) {
 
         score++;
 
     }
 
-
-    /* 3 EMA */
 
     if (emaValid) {
 
@@ -3939,16 +3935,12 @@ function evaluateTradeGate() {
     }
 
 
-    /* 4 RSI */
-
     if (rsiProtection.valid) {
 
         score++;
 
     }
 
-
-    /* 5 Momentum */
 
     if (momentumValid) {
 
@@ -3957,16 +3949,12 @@ function evaluateTradeGate() {
     }
 
 
-    /* 6 Candle */
-
     if (candleQuality.valid) {
 
         score++;
 
     }
 
-
-    /* 7 EMA Extension */
 
     if (extension.valid) {
 
@@ -3975,16 +3963,12 @@ function evaluateTradeGate() {
     }
 
 
-    /* 8 Session */
-
     if (sessionValid) {
 
         score++;
 
     }
 
-
-    /* 9 H1 S/R */
 
     if (srCheck.valid) {
 
@@ -3993,8 +3977,6 @@ function evaluateTradeGate() {
     }
 
 
-    /* 10 R:R */
-
     if (rrValid) {
 
         score++;
@@ -4002,18 +3984,12 @@ function evaluateTradeGate() {
     }
 
 
-    /* 11 A+ Reversal */
-
     if (reversal.valid) {
 
         score++;
 
     }
 
-
-    /* =====================================================
-       FINAL DECISION
-       ===================================================== */
 
     let decision =
 
@@ -4843,6 +4819,40 @@ async function loadMarketData() {
     await fetchLivePrice();
 
 
+    /*
+       EXTRA CURRENT PRICE SYNC
+
+       Make sure currentPrice is populated
+       before H1 S/R calculation.
+    */
+
+    if (finite(livePrice)) {
+
+        const formattedPrice =
+
+            livePrice.toFixed(5);
+
+
+        setText(
+
+            "currentPrice",
+
+            formattedPrice
+
+        );
+
+
+        setText(
+
+            "srCurrentPrice",
+
+            formattedPrice
+
+        );
+
+    }
+
+
     /* -----------------------------------------
        M5
        ----------------------------------------- */
@@ -4934,6 +4944,37 @@ async function loadMarketData() {
        ----------------------------------------- */
 
     updateHourlySR();
+
+
+    /* -----------------------------------------
+       FINAL CURRENT PRICE SYNC
+       ----------------------------------------- */
+
+    if (finite(livePrice)) {
+
+        const formattedPrice =
+
+            livePrice.toFixed(5);
+
+
+        setText(
+
+            "currentPrice",
+
+            formattedPrice
+
+        );
+
+
+        setText(
+
+            "srCurrentPrice",
+
+            formattedPrice
+
+        );
+
+    }
 
 
     /* -----------------------------------------
