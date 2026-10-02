@@ -230,6 +230,18 @@ body {
     border: 1px solid rgba(32,217,255,.3);
 }
 
+.badge.ready {
+    background: rgba(0,229,154,.10);
+    color: var(--green);
+    border: 1px solid rgba(0,229,154,.3);
+}
+
+.badge.blocked {
+    background: rgba(255,64,93,.10);
+    color: var(--red);
+    border: 1px solid rgba(255,64,93,.3);
+}
+
 .infoLine {
     border-bottom: 1px solid #102c3d;
     padding: 6px 0;
@@ -453,6 +465,7 @@ body {
     width: 0%;
     height: 100%;
     background: var(--yellow);
+    transition: width .3s ease;
 }
 
 .checkList {
@@ -478,6 +491,7 @@ body {
     border: 1px solid #385264;
     color: var(--muted);
     font-size: 9px;
+    flex-shrink: 0;
 }
 
 .checkText {
@@ -487,6 +501,7 @@ body {
 .checkStatus {
     color: var(--yellow);
     font-size: 9px;
+    text-align: right;
 }
 
 /* =========================================================
@@ -625,6 +640,11 @@ body {
     .chartArea {
         height: 300px;
     }
+
+    .footer {
+        flex-direction: column;
+        gap: 6px;
+    }
 }
 
 </style>
@@ -656,6 +676,7 @@ body {
                 <span class="liveDot"></span>
                 Live Price
             </div>
+
             <div class="topValue" id="livePrice">—</div>
         </div>
 
@@ -715,7 +736,7 @@ body {
 
         <div class="tfHeader">
             <div class="tfName">H4</div>
-            <div class="badge pending">WAITING</div>
+            <div class="badge pending" id="h4Status">WAITING</div>
         </div>
 
         <div class="infoLine">
@@ -747,7 +768,7 @@ body {
 
         <div class="tfHeader">
             <div class="tfName">H1</div>
-            <div class="badge pending">WAITING</div>
+            <div class="badge pending" id="h1Status">WAITING</div>
         </div>
 
         <div class="infoLine">
@@ -779,7 +800,7 @@ body {
 
         <div class="tfHeader">
             <div class="tfName">M15</div>
-            <div class="badge pending">WAITING</div>
+            <div class="badge pending" id="m15Status">WAITING</div>
         </div>
 
         <div class="infoLine">
@@ -811,7 +832,7 @@ body {
 
         <div class="tfHeader">
             <div class="tfName">M5</div>
-            <div class="badge pending">WAITING</div>
+            <div class="badge pending" id="m5Status">WAITING</div>
         </div>
 
         <div class="infoLine">
@@ -857,21 +878,21 @@ body {
             </div>
 
             <div class="chartTabs">
-                <span>H4</span>
-                <span>H1</span>
-                <span>M15</span>
-                <span class="active">M5</span>
+                <span id="tabH4">H4</span>
+                <span id="tabH1">H1</span>
+                <span id="tabM15">M15</span>
+                <span id="tabM5" class="active">M5</span>
             </div>
 
         </div>
 
-        <div class="chartArea">
+        <div class="chartArea" id="chartArea">
 
-            <div class="chartMessage">
+            <div class="chartMessage" id="chartMessage">
 
                 <strong>LIVE CHART ENGINE</strong>
 
-                <span>
+                <span id="chartMessageText">
                     Waiting for real EUR/USD candle data
                 </span>
 
@@ -987,119 +1008,308 @@ body {
             </div>
 
             <div class="scoreBar">
+
                 <div
                     class="scoreFill"
                     id="scoreFill">
                 </div>
+
             </div>
 
         </div>
 
         <div class="checkList">
 
+
+            <!-- 01 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkDirectionIcon">○</div>
+
                 <div class="checkText">
                     H4 + H1 Direction Agree
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkDirectionStatus">
+                    PENDING
+                </div>
+
             </div>
 
+
+            <!-- 02 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkStructureIcon">○</div>
+
                 <div class="checkText">
                     M15 + M5 Structure
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkStructureStatus">
+                    PENDING
+                </div>
+
             </div>
 
+
+            <!-- 03 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkEmaIcon">○</div>
+
                 <div class="checkText">
                     M5 EMA Alignment
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkEmaStatus">
+                    PENDING
+                </div>
+
             </div>
 
+
+            <!-- 04 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkRsiIcon">○</div>
+
                 <div class="checkText">
                     RSI Safety
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkRsiStatus">
+                    PENDING
+                </div>
+
             </div>
 
+
+            <!-- 05 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div
+                    class="checkIcon"
+                    id="checkRsiProtectionIcon">
+                    ○
+                </div>
+
                 <div class="checkText">
                     RSI Overbought / Oversold Protection
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkRsiProtectionStatus">
+                    PENDING
+                </div>
+
             </div>
 
+
+            <!-- 06 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkMomentumIcon">
+                    ○
+                </div>
+
                 <div class="checkText">
                     Momentum
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkMomentumStatus">
+                    PENDING
+                </div>
+
             </div>
 
+
+            <!-- 07 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkCandleIcon">
+                    ○
+                </div>
+
                 <div class="checkText">
                     Candle Quality
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkCandleStatus">
+                    PENDING
+                </div>
+
             </div>
 
+
+            <!-- 08 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkExtensionIcon">
+                    ○
+                </div>
+
                 <div class="checkText">
                     EMA Extension
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkExtensionStatus">
+                    PENDING
+                </div>
+
             </div>
 
+
+            <!-- 09 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkSessionIcon">
+                    ○
+                </div>
+
                 <div class="checkText">
                     Session Context
                 </div>
-                <div class="checkStatus">CONTEXT</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkSessionStatus">
+                    CONTEXT
+                </div>
+
             </div>
 
+
+            <!-- 10 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkSrIcon">
+                    ○
+                </div>
+
                 <div class="checkText">
                     Support / Resistance Validation
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkSrStatus">
+                    PENDING
+                </div>
+
             </div>
 
+
+            <!-- 11 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkNewsIcon">
+                    ○
+                </div>
+
                 <div class="checkText">
                     High-Impact News Blocker
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkNewsStatus">
+                    PENDING
+                </div>
+
             </div>
 
+
+            <!-- 12 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkSlIcon">
+                    ○
+                </div>
+
                 <div class="checkText">
                     Structural Stop Loss
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkSlStatus">
+                    PENDING
+                </div>
+
             </div>
 
+
+            <!-- 13 -->
+
             <div class="check">
-                <div class="checkIcon">○</div>
+
+                <div class="checkIcon" id="checkRrIcon">
+                    ○
+                </div>
+
                 <div class="checkText">
                     Real Risk : Reward
                 </div>
-                <div class="checkStatus">PENDING</div>
+
+                <div
+                    class="checkStatus"
+                    id="checkRrStatus">
+                    PENDING
+                </div>
+
             </div>
+
+
+            <!-- 14 -->
+
+            <div class="check">
+
+                <div
+                    class="checkIcon"
+                    id="checkReversalIcon">
+                    ○
+                </div>
+
+                <div class="checkText">
+                    A+ Reversal Setup
+                </div>
+
+                <div
+                    class="checkStatus"
+                    id="checkReversalStatus">
+                    PENDING
+                </div>
+
+            </div>
+
 
         </div>
 
@@ -1120,32 +1330,73 @@ body {
     <div class="panel">
 
         <div class="panelHeader">
+
             <div class="panelTitle">
                 LATEST NEWS
-                <span style="color:var(--red);">(HIGH IMPACT)</span>
+                <span style="color:var(--red);">
+                    (HIGH IMPACT)
+                </span>
+
             </div>
+
         </div>
 
         <div class="panelBody">
 
             <div class="listRow">
-                <span class="level">Economic Calendar</span>
-                <span class="value yellow">WAITING</span>
+
+                <span class="level">
+                    Economic Calendar
+                </span>
+
+                <span
+                    class="value yellow"
+                    id="newsCalendar">
+                    WAITING
+                </span>
+
             </div>
 
             <div class="listRow">
-                <span class="level">EUR Events</span>
-                <span class="value">—</span>
+
+                <span class="level">
+                    EUR Events
+                </span>
+
+                <span
+                    class="value"
+                    id="eurEvents">
+                    —
+                </span>
+
             </div>
 
             <div class="listRow">
-                <span class="level">USD Events</span>
-                <span class="value">—</span>
+
+                <span class="level">
+                    USD Events
+                </span>
+
+                <span
+                    class="value"
+                    id="usdEvents">
+                    —
+                </span>
+
             </div>
 
             <div class="listRow">
-                <span class="level">High Impact</span>
-                <span class="value">—</span>
+
+                <span class="level">
+                    High Impact
+                </span>
+
+                <span
+                    class="value"
+                    id="highImpactNews">
+                    —
+                </span>
+
             </div>
 
         </div>
@@ -1158,36 +1409,83 @@ body {
     <div class="panel">
 
         <div class="panelHeader">
+
             <div class="panelTitle">
                 SUPPORT & RESISTANCE ZONES
             </div>
+
         </div>
 
         <div class="panelBody">
 
             <div class="listRow">
-                <span class="level">Resistance 1</span>
-                <span class="value red">—</span>
+
+                <span class="level">
+                    Resistance 1
+                </span>
+
+                <span
+                    class="value red"
+                    id="resistance1">
+                    —
+                </span>
+
             </div>
 
             <div class="listRow">
-                <span class="level">Resistance 2</span>
-                <span class="value red">—</span>
+
+                <span class="level">
+                    Resistance 2
+                </span>
+
+                <span
+                    class="value red"
+                    id="resistance2">
+                    —
+                </span>
+
             </div>
 
             <div class="listRow">
-                <span class="level">Current Price</span>
-                <span class="value cyan" id="srPrice">—</span>
+
+                <span class="level">
+                    Current Price
+                </span>
+
+                <span
+                    class="value cyan"
+                    id="srPrice">
+                    —
+                </span>
+
             </div>
 
             <div class="listRow">
-                <span class="level">Support 1</span>
-                <span class="value green">—</span>
+
+                <span class="level">
+                    Support 1
+                </span>
+
+                <span
+                    class="value green"
+                    id="support1">
+                    —
+                </span>
+
             </div>
 
             <div class="listRow">
-                <span class="level">Support 2</span>
-                <span class="value green">—</span>
+
+                <span class="level">
+                    Support 2
+                </span>
+
+                <span
+                    class="value green"
+                    id="support2">
+                    —
+                </span>
+
             </div>
 
         </div>
@@ -1200,36 +1498,83 @@ body {
     <div class="panel">
 
         <div class="panelHeader">
+
             <div class="panelTitle">
                 RISK & REWARD
             </div>
+
         </div>
 
         <div class="panelBody">
 
             <div class="listRow">
-                <span class="level">Live Price / Entry</span>
-                <span class="value">—</span>
+
+                <span class="level">
+                    Live Price / Entry
+                </span>
+
+                <span
+                    class="value"
+                    id="riskEntry">
+                    —
+                </span>
+
             </div>
 
             <div class="listRow">
-                <span class="level">Structural SL</span>
-                <span class="value">—</span>
+
+                <span class="level">
+                    Structural SL
+                </span>
+
+                <span
+                    class="value"
+                    id="riskSl">
+                    —
+                </span>
+
             </div>
 
             <div class="listRow">
-                <span class="level">TP1</span>
-                <span class="value">—</span>
+
+                <span class="level">
+                    TP1
+                </span>
+
+                <span
+                    class="value"
+                    id="riskTp1">
+                    —
+                </span>
+
             </div>
 
             <div class="listRow">
-                <span class="level">TP2</span>
-                <span class="value">—</span>
+
+                <span class="level">
+                    TP2
+                </span>
+
+                <span
+                    class="value"
+                    id="riskTp2">
+                    —
+                </span>
+
             </div>
 
             <div class="listRow">
-                <span class="level">Actual R:R</span>
-                <span class="value yellow">—</span>
+
+                <span class="level">
+                    Actual R:R
+                </span>
+
+                <span
+                    class="value yellow"
+                    id="riskRr">
+                    —
+                </span>
+
             </div>
 
         </div>
@@ -1242,22 +1587,24 @@ body {
     <div class="panel">
 
         <div class="panelHeader">
+
             <div class="panelTitle">
                 QUICK ACTIONS
             </div>
+
         </div>
 
         <div class="panelBody">
 
             <button
                 class="action buy"
-                onclick="showMessage('BUY analysis will be enabled after live data is connected.')">
+                onclick="analyzeBuy()">
                 ↑ ANALYZE BUY SETUP
             </button>
 
             <button
                 class="action sell"
-                onclick="showMessage('SELL analysis will be enabled after live data is connected.')">
+                onclick="analyzeSell()">
                 ↓ ANALYZE SELL SETUP
             </button>
 
@@ -1269,7 +1616,7 @@ body {
 
             <button
                 class="action"
-                onclick="showMessage('Alerts will be enabled in a later version.')">
+                onclick="setAlert()">
                 ♧ SET ALERT
             </button>
 
@@ -1287,10 +1634,14 @@ body {
 <footer class="footer">
 
     <span>
-        EUR/USD SNIPER DASHBOARD v2.0
+        EUR/USD SNIPER DASHBOARD v2.1
     </span>
 
     <span>
+        ENGINE 1 • SNIPER
+        &nbsp;|&nbsp;
+        ENGINE 2 • SCALP
+        &nbsp;|&nbsp;
         ENGINE 3 • ELITE TRADE GATE
     </span>
 
@@ -1305,13 +1656,15 @@ body {
 
 
 <!-- =======================================================
-     V2 MARKET DATA ENGINE
+     MARKET DATA ENGINE
      =======================================================
 
-     All dashboard JavaScript is now loaded from
-     script.js.
+     IMPORTANT:
+     API keys must NOT be placed in this HTML file.
 
-     Do NOT put API keys in this HTML file.
+     All market-data and trading-engine JavaScript
+     is loaded from script.js.
+
      ======================================================= -->
 
 <script src="script.js"></script>
