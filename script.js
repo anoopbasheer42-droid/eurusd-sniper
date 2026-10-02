@@ -25,7 +25,7 @@
    ========================================================= */
 
 const TWELVE_DATA_API_KEY =
-    "PASTE_YOUR_EXISTING_TWELVE_DATA_API_KEY_HERE";
+    "53821bf38bec40e4a88bd1fa06ac32b3";
 
 const SYMBOL = "EUR/USD";
 
