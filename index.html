@@ -1,1 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>EUR/USD Sniper Dashboard</title>
+
+<style>
+
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #030a12;
+    --panel: #071522;
+    --panel2: #091c2c;
+    --border: #123b56;
+    --cyan: #20d9ff;
+    --blue: #3b82f6;
+    --green: #00e59a;
+    --red: #ff405d;
+    --yellow: #ffc83d;
+    --orange: #ff9f1c;
+    --text: #edf8ff;
+    --muted: #7895a9;
+}
+
+body {
+    margin: 0;
+    background:
+        radial-gradient(circle at 20% 10%, #0a2031 0, transparent 35%),
+        radial-gradient(circle at 90% 20%, #061c2b 0, transparent 30%),
+        var(--bg);
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+    min-height: 100vh;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.header {
+    min-height: 82px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    gap: 15px;
+    background: rgba(3, 10, 18, 0.95);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 260px;
+}
+
+.logo {
+    width: 50px;
+    height: 50px;
+    border: 2px solid var(--cyan);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cyan);
+    font-size: 25px;
+    box-shadow: 0 0 18px rgba(32,217,255,.25);
+}
+
+.brand h1 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: 1px;
+}
+
+.brand p {
+    margin: 5px 0 0;
+    color: var(--cyan);
+    font-size: 10px;
+    letter-spacing: 2px;
+}
+
+.topStats {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.topCard {
+    min-width: 145px;
+    border: 1px solid var(--border);
+    background: linear-gradient(145deg, #081b2b, #06121e);
+    border-radius: 8px;
+    padding: 9px 12px;
+}
+
+.topLabel {
+    color: var(--muted);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.topValue {
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 4px;
+}
+
+.liveDot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    margin-right: 5px;
+    box-shadow: 0 0 8px var(--green);
+}
+
+/* =========================================================
+   NAV
+   ========================================================= */
+
+.nav {
+    height: 45px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 0 20px;
+    background: #040d16;
+}
+
+.nav span {
+    color: #91afc2;
+    font-size: 12px;
+}
+
+.nav span:first-child {
+    color: white;
+}
+
+/* =========================================================
+   MAIN
+   ========================================================= */
+
+.container {
+    padding: 14px;
+    max-width: 1800px;
+    margin: auto;
+}
+
+.sectionTitle {
+    color: #9db9ca;
+    font-size: 12px;
+    letter-spacing: .8px;
+    margin: 4px 0 10px;
+}
+
+.gridTop {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+/* =========================================================
+   TIMEFRAME CARDS
+   ========================================================= */
+
+.tfCard {
+    background: linear-gradient(145deg, #081a2a, #06111c);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 205px;
+    position: relative;
+    overflow: hidden;
+}
+
+.tfCard:after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--border);
+}
+
+.tfHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 13px;
+}
+
+.tfName {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.badge {
+    padding: 5px 8px;
+    border-radius: 5px;
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: .5px;
+}
+
+.badge.wait {
+    background: rgba(255,200,61,.15);
+    color: var(--yellow);
+    border: 1px solid rgba(255,200,61,.35);
+}
+
+.badge.pending {
+    background: rgba(32,217,255,.10);
+    color: var(--cyan);
+    border: 1px solid rgba(32,217,255,.3);
+}
+
+.infoLine {
+    border-bottom: 1px solid #102c3d;
+    padding: 6px 0;
+}
+
+.infoLine:last-child {
+    border-bottom: 0;
+}
+
+.infoLabel {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.infoValue {
+    margin-top: 3px;
+    font-size: 12px;
+}
+
+/* =========================================================
+   MIDDLE GRID
+   ========================================================= */
+
+.middleGrid {
+    display: grid;
+    grid-template-columns: 1.8fr .75fr .75fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.panel {
+    background: linear-gradient(145deg, #071a29, #06111b);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.panelHeader {
+    min-height: 42px;
+    padding: 10px 13px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panelTitle {
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: .5px;
+}
+
+.panelBody {
+    padding: 12px;
+}
+
+/* =========================================================
+   CHART
+   ========================================================= */
+
+.chartTabs {
+    display: flex;
+    gap: 5px;
+}
+
+.chartTabs span {
+    border: 1px solid var(--border);
+    padding: 5px 9px;
+    border-radius: 4px;
+    font-size: 9px;
+    color: #91afc2;
+}
+
+.chartTabs span.active {
+    color: white;
+    background: #0c4262;
+    border-color: var(--cyan);
+}
+
+.chartArea {
+    height: 370px;
+    position: relative;
+    background:
+        linear-gradient(rgba(34,83,110,.13) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,83,110,.13) 1px, transparent 1px);
+    background-size: 50px 50px;
+    overflow: hidden;
+}
+
+.chartMessage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: var(--muted);
+    text-align: center;
+}
+
+.chartMessage strong {
+    color: var(--cyan);
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.chartMessage span {
+    font-size: 11px;
+}
+
+.chartFooter {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+/* =========================================================
+   INDICATORS
+   ========================================================= */
+
+.metric {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #102b3b;
+    padding: 9px 0;
+}
+
+.metric:last-child {
+    border-bottom: none;
+}
+
+.metric span:first-child {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.metric span:last-child {
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.green {
+    color: var(--green);
+}
+
+.red {
+    color: var(--red);
+}
+
+.yellow {
+    color: var(--yellow);
+}
+
+.cyan {
+    color: var(--cyan);
+}
+
+/* =========================================================
+   ENGINE 3
+   ========================================================= */
+
+.engine {
+    border: 1px solid #805e00;
+    background:
+        linear-gradient(145deg, #101a20, #080f15);
+}
+
+.engineHeader {
+    padding: 13px;
+    border-bottom: 1px solid #5b4709;
+    color: var(--yellow);
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: .7px;
+}
+
+.engineDecision {
+    margin: 13px;
+    border: 1px solid var(--yellow);
+    border-radius: 7px;
+    padding: 17px;
+    text-align: center;
+    background: rgba(255,200,61,.05);
+}
+
+.engineDecision h2 {
+    color: var(--yellow);
+    margin: 0;
+    font-size: 27px;
+}
+
+.engineDecision p {
+    margin: 6px 0 0;
+    color: #b4c5cf;
+    font-size: 11px;
+}
+
+.scoreRow {
+    padding: 0 13px 13px;
+}
+
+.scoreTop {
+    display: flex;
+    justify-content: space-between;
+    color: #a9bfca;
+    font-size: 10px;
+}
+
+.scoreBar {
+    height: 8px;
+    background: #102536;
+    margin-top: 7px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.scoreFill {
+    width: 0%;
+    height: 100%;
+    background: var(--yellow);
+}
+
+.checkList {
+    padding: 0 13px 13px;
+}
+
+.check {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    border-bottom: 1px solid #172b37;
+    padding: 9px 0;
+    font-size: 10px;
+}
+
+.checkIcon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #385264;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.checkText {
+    flex: 1;
+}
+
+.checkStatus {
+    color: var(--yellow);
+    font-size: 9px;
+}
+
+/* =========================================================
+   LOWER GRID
+   ========================================================= */
+
+.lowerGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.listRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid #102c3d;
+    font-size: 10px;
+}
+
+.listRow:last-child {
+    border-bottom: none;
+}
+
+.level {
+    color: var(--muted);
+}
+
+.value {
+    font-weight: bold;
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.action {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: #0a1c2a;
+    color: white;
+    padding: 11px;
+    border-radius: 5px;
+    margin-bottom: 8px;
+    font-weight: bold;
+    font-size: 10px;
+}
+
+.action.buy {
+    border-color: #087c5c;
+    color: var(--green);
+}
+
+.action.sell {
+    border-color: #8b2436;
+    color: var(--red);
+}
+
+.action.refresh {
+    color: var(--cyan);
+}
+
+.action:hover {
+    filter: brightness(1.25);
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.footer {
+    margin-top: 13px;
+    border-top: 1px solid var(--border);
+    padding: 14px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+    .header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .topStats {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .gridTop {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .middleGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .lowerGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 650px) {
+
+    .container {
+        padding: 8px;
+    }
+
+    .gridTop,
+    .lowerGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .brand h1 {
+        font-size: 16px;
+    }
+
+    .topCard {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .nav {
+        overflow-x: auto;
+        gap: 18px;
+    }
+
+    .chartArea {
+        height: 300px;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- =======================================================
+     HEADER
+     ======================================================= -->
+
+<header class="header">
+
+    <div class="brand">
+
+        <div class="logo">◎</div>
+
+        <div>
+            <h1>EUR/USD SNIPER DASHBOARD</h1>
+            <p>ELITE TRADE GATE • ANALYZE • CONFIRM • EXECUTE</p>
+        </div>
+
+    </div>
+
+    <div class="topStats">
+
+        <div class="topCard">
+            <div class="topLabel">
+                <span class="liveDot"></span>
+                Live Price
+            </div>
+            <div class="topValue" id="livePrice">—</div>
+        </div>
+
+        <div class="topCard">
+            <div class="topLabel">M5 Candle</div>
+            <div class="topValue" id="candleStatus">WAITING</div>
+        </div>
+
+        <div class="topCard">
+            <div class="topLabel">India Time</div>
+            <div class="topValue" id="clock">--:--:--</div>
+        </div>
+
+        <div class="topCard">
+            <div class="topLabel">Session</div>
+            <div class="topValue" id="session">—</div>
+        </div>
+
+    </div>
+
+</header>
+
+
+<!-- =======================================================
+     NAVIGATION
+     ======================================================= -->
+
+<nav class="nav">
+
+    <span>⌂ Dashboard</span>
+    <span>▣ Charts</span>
+    <span>◈ Analysis</span>
+    <span>▤ News</span>
+    <span>⚙ Settings</span>
+
+</nav>
+
+
+<main class="container">
+
+
+<!-- =======================================================
+     MULTI TIMEFRAME
+     ======================================================= -->
+
+<div class="sectionTitle">
+    MULTI-TIMEFRAME ANALYSIS
+    <span>(MARKET DIRECTION & STRUCTURE)</span>
+</div>
+
+<div class="gridTop">
+
+
+    <!-- H4 -->
+
+    <div class="tfCard">
+
+        <div class="tfHeader">
+            <div class="tfName">H4</div>
+            <div class="badge pending">WAITING</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Direction</div>
+            <div class="infoValue">—</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Structure</div>
+            <div class="infoValue">Waiting for data</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Swing High</div>
+            <div class="infoValue">—</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Swing Low</div>
+            <div class="infoValue">—</div>
+        </div>
+
+    </div>
+
+
+    <!-- H1 -->
+
+    <div class="tfCard">
+
+        <div class="tfHeader">
+            <div class="tfName">H1</div>
+            <div class="badge pending">WAITING</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Direction</div>
+            <div class="infoValue">—</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Structure</div>
+            <div class="infoValue">Waiting for data</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Swing High</div>
+            <div class="infoValue">—</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Swing Low</div>
+            <div class="infoValue">—</div>
+        </div>
+
+    </div>
+
+
+    <!-- M15 -->
+
+    <div class="tfCard">
+
+        <div class="tfHeader">
+            <div class="tfName">M15</div>
+            <div class="badge pending">WAITING</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Structure</div>
+            <div class="infoValue">Waiting for data</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Trend</div>
+            <div class="infoValue">—</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">EMA Alignment</div>
+            <div class="infoValue">—</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Liquidity</div>
+            <div class="infoValue">—</div>
+        </div>
+
+    </div>
+
+
+    <!-- M5 -->
+
+    <div class="tfCard">
+
+        <div class="tfHeader">
+            <div class="tfName">M5</div>
+            <div class="badge pending">WAITING</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Structure</div>
+            <div class="infoValue">Waiting for data</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">EMA</div>
+            <div class="infoValue">—</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">RSI</div>
+            <div class="infoValue">—</div>
+        </div>
+
+        <div class="infoLine">
+            <div class="infoLabel">Candle Quality</div>
+            <div class="infoValue">—</div>
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =======================================================
+     MIDDLE
+     ======================================================= -->
+
+<div class="middleGrid">
+
+
+    <!-- CHART -->
+
+    <div class="panel">
+
+        <div class="panelHeader">
+
+            <div class="panelTitle">
+                EUR/USD • MULTI-TIMEFRAME CHART
+            </div>
+
+            <div class="chartTabs">
+                <span>H4</span>
+                <span>H1</span>
+                <span>M15</span>
+                <span class="active">M5</span>
+            </div>
+
+        </div>
+
+        <div class="chartArea">
+
+            <div class="chartMessage">
+
+                <strong>LIVE CHART ENGINE</strong>
+
+                <span>
+                    Waiting for real EUR/USD candle data
+                </span>
+
+                <span style="margin-top:7px;">
+                    No simulated market data
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="chartFooter">
+
+            <span>EUR/USD</span>
+
+            <span>
+                Live Price:
+                <b id="chartPrice">—</b>
+            </span>
+
+            <span id="chartState">
+                DATA: WAITING
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <!-- KEY INDICATORS -->
+
+    <div class="panel">
+
+        <div class="panelHeader">
+
+            <div class="panelTitle">
+                KEY INDICATORS
+                <span style="color:var(--cyan);">(M5)</span>
+            </div>
+
+        </div>
+
+        <div class="panelBody">
+
+            <div class="metric">
+                <span>EMA 20</span>
+                <span id="ema20">—</span>
+            </div>
+
+            <div class="metric">
+                <span>EMA 50</span>
+                <span id="ema50">—</span>
+            </div>
+
+            <div class="metric">
+                <span>EMA 200</span>
+                <span id="ema200">—</span>
+            </div>
+
+            <div class="metric">
+                <span>RSI (14)</span>
+                <span id="rsi">—</span>
+            </div>
+
+            <div class="metric">
+                <span>Momentum</span>
+                <span id="momentum">—</span>
+            </div>
+
+            <div class="metric">
+                <span>Candle Quality</span>
+                <span id="candleQuality">—</span>
+            </div>
+
+            <div class="metric">
+                <span>EMA Extension</span>
+                <span id="emaExtension">—</span>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ENGINE 3 -->
+
+    <div class="panel engine">
+
+        <div class="engineHeader">
+            ENGINE 3 — ELITE TRADE GATE
+        </div>
+
+        <div class="engineDecision">
+
+            <h2 id="decision">WAIT</h2>
+
+            <p id="decisionReason">
+                A+ setup not confirmed
+            </p>
+
+        </div>
+
+        <div class="scoreRow">
+
+            <div class="scoreTop">
+
+                <span>Dynamic A+ Score</span>
+
+                <span id="score">
+                    0 / 10
+                </span>
+
+            </div>
+
+            <div class="scoreBar">
+                <div
+                    class="scoreFill"
+                    id="scoreFill">
+                </div>
+            </div>
+
+        </div>
+
+        <div class="checkList">
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    H4 + H1 Direction Agree
+                </div>
+
+                <div class="checkStatus">
+                    PENDING
+                </div>
+
+            </div>
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    M15 + M5 Structure
+                </div>
+
+                <div class="checkStatus">
+                    PENDING
+                </div>
+
+            </div>
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    M5 EMA Alignment
+                </div>
+
+                <div class="checkStatus">
+                    PENDING
+                </div>
+
+            </div>
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    RSI Safety
+                </div>
+
+                <div class="checkStatus">
+                    PENDING
+                </div>
+
+            </div>
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    Momentum
+                </div>
+
+                <div class="checkStatus">
+                    PENDING
+                </div>
+
+            </div>
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    Candle Quality
+                </div>
+
+                <div class="checkStatus">
+                    PENDING
+                </div>
+
+            </div>
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    EMA Extension
+                </div>
+
+                <div class="checkStatus">
+                    PENDING
+                </div>
+
+            </div>
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    Session Context
+                </div>
+
+                <div class="checkStatus">
+                    CONTEXT
+                </div>
+
+            </div>
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    Support / Resistance
+                </div>
+
+                <div class="checkStatus">
+                    PENDING
+                </div>
+
+            </div>
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    High-Impact News
+                </div>
+
+                <div class="checkStatus">
+                    PENDING
+                </div>
+
+            </div>
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    Structural Stop Loss
+                </div>
+
+                <div class="checkStatus">
+                    PENDING
+                </div>
+
+            </div>
+
+
+            <div class="check">
+
+                <div class="checkIcon">○</div>
+
+                <div class="checkText">
+                    Real Risk : Reward
+                </div>
+
+                <div class="checkStatus">
+                    PENDING
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =======================================================
+     LOWER GRID
+     ======================================================= -->
+
+<div class="lowerGrid">
+
+
+    <!-- NEWS -->
+
+    <div class="panel">
+
+        <div class="panelHeader">
+            <div class="panelTitle">
+                LATEST NEWS
+                <span style="color:var(--red);">(HIGH IMPACT)</span>
+            </div>
+        </div>
+
+        <div class="panelBody">
+
+            <div class="listRow">
+                <span class="level">Economic Calendar</span>
+                <span class="value yellow">WAITING</span>
+            </div>
+
+            <div class="listRow">
+                <span class="level">EUR Events</span>
+                <span class="value">—</span>
+            </div>
+
+            <div class="listRow">
+                <span class="level">USD Events</span>
+                <span class="value">—</span>
+            </div>
+
+            <div class="listRow">
+                <span class="level">High Impact</span>
+                <span class="value">—</span>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- S/R -->
+
+    <div class="panel">
+
+        <div class="panelHeader">
+            <div class="panelTitle">
+                SUPPORT & RESISTANCE ZONES
+            </div>
+        </div>
+
+        <div class="panelBody">
+
+            <div class="listRow">
+                <span class="level">Resistance 1</span>
+                <span class="value red">—</span>
+            </div>
+
+            <div class="listRow">
+                <span class="level">Resistance 2</span>
+                <span class="value red">—</span>
+            </div>
+
+            <div class="listRow">
+                <span class="level">Current Price</span>
+                <span class="value cyan" id="srPrice">—</span>
+            </div>
+
+            <div class="listRow">
+                <span class="level">Support 1</span>
+                <span class="value green">—</span>
+            </div>
+
+            <div class="listRow">
+                <span class="level">Support 2</span>
+                <span class="value green">—</span>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- RISK -->
+
+    <div class="panel">
+
+        <div class="panelHeader">
+            <div class="panelTitle">
+                RISK & REWARD
+            </div>
+        </div>
+
+        <div class="panelBody">
+
+            <div class="listRow">
+                <span class="level">Entry</span>
+                <span class="value">—</span>
+            </div>
+
+            <div class="listRow">
+                <span class="level">Structural SL</span>
+                <span class="value">—</span>
+            </div>
+
+            <div class="listRow">
+                <span class="level">TP1</span>
+                <span class="value">—</span>
+            </div>
+
+            <div class="listRow">
+                <span class="level">TP2</span>
+                <span class="value">—</span>
+            </div>
+
+            <div class="listRow">
+                <span class="level">Actual R:R</span>
+                <span class="value yellow">—</span>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ACTIONS -->
+
+    <div class="panel">
+
+        <div class="panelHeader">
+            <div class="panelTitle">
+                QUICK ACTIONS
+            </div>
+        </div>
+
+        <div class="panelBody">
+
+            <button
+                class="action buy"
+                onclick="showMessage('BUY analysis will be enabled after live data is connected.')">
+                ↑ ANALYZE BUY SETUP
+            </button>
+
+            <button
+                class="action sell"
+                onclick="showMessage('SELL analysis will be enabled after live data is connected.')">
+                ↓ ANALYZE SELL SETUP
+            </button>
+
+            <button
+                class="action refresh"
+                onclick="refreshDashboard()">
+                ⟳ REFRESH DATA
+            </button>
+
+            <button
+                class="action"
+                onclick="showMessage('Alerts will be enabled in a later version.')">
+                ♧ SET ALERT
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =======================================================
+     FOOTER
+     ======================================================= -->
+
+<footer class="footer">
+
+    <span>
+        EUR/USD SNIPER DASHBOARD v1.0
+    </span>
+
+    <span>
+        ENGINE 3 • ELITE TRADE GATE
+    </span>
+
+    <span>
+        Not Financial Advice
+    </span>
+
+</footer>
+
+
+</main>
+
+
+<script>
+
+/* =========================================================
+   CLOCK
+   ========================================================= */
+
+function updateClock() {
+
+    const now = new Date();
+
+    const ist = new Intl.DateTimeFormat(
+        "en-IN",
+        {
+            timeZone: "Asia/Kolkata",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false
+        }
+    ).format(now);
+
+    document.getElementById("clock").textContent = ist;
+}
+
+
+/* =========================================================
+   SESSION CONTEXT
+   IMPORTANT:
+   SESSION DOES NOT BLOCK TRADES.
+   IT IS ONLY CONTEXT.
+   ========================================================= */
+
+function updateSession() {
+
+    const now = new Date();
+
+    const parts = new Intl.DateTimeFormat(
+        "en-US",
+        {
+            timeZone: "Asia/Kolkata",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false
+        }
+    ).formatToParts(now);
+
+    let hour = 0;
+
+    for (const part of parts) {
+
+        if (part.type === "hour") {
+            hour = Number(part.value);
+        }
+
+    }
+
+    let session = "Asia";
+
+    /*
+       Approximate display windows only.
+
+       These are NOT trade blockers.
+       Later we will build proper session logic.
+    */
+
+    if (hour >= 11 && hour < 16) {
+        session = "London";
+    }
+
+    if (hour >= 16 && hour < 22) {
+        session = "London / New York";
+    }
+
+    if (hour >= 22 || hour < 6) {
+        session = "New York / Asia";
+    }
+
+    document.getElementById("session").textContent = session;
+}
+
+
+/* =========================================================
+   REFRESH
+   ========================================================= */
+
+function refreshDashboard() {
+
+    document.getElementById("chartState").textContent =
+        "DATA: WAITING";
+
+    document.getElementById("candleStatus").textContent =
+        "WAITING";
+
+    showMessage(
+        "Live market data engine is not connected yet."
+    );
+}
+
+
+/* =========================================================
+   MESSAGE
+   ========================================================= */
+
+function showMessage(message) {
+
+    alert(message);
+
+}
+
+
+/* =========================================================
+   INITIALIZE
+   ========================================================= */
+
+function initializeDashboard() {
+
+    updateClock();
+    updateSession();
+
+    /*
+       Important:
+
+       We intentionally DO NOT generate fake prices,
+       fake RSI values, fake EMA values or fake signals.
+
+       Those will come from the real market-data engine
+       in the next development stage.
+    */
+
+}
+
+
+/* =========================================================
+   RUN
+   ========================================================= */
+
+initializeDashboard();
+
+setInterval(updateClock, 1000);
+
+setInterval(updateSession, 30000);
+
+</script>
+
+</body>
+</html>
