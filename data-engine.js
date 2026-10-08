@@ -1,16 +1,13 @@
 /* =========================================================
-   TWO-SIDED ELITE SCALPER — DATA ENGINE v2
-   Fetches Twelve Data + runs scalper engine + updates UI
+   TWO-SIDED ELITE SCALPER — DATA ENGINE v3 (Cached)
+   2-min UI refresh with smart caching to stay under API limits
    ========================================================= */
 
 "use strict";
 
-/* =========================================================
-   CONFIG
-   ========================================================= */
 const TWELVE_DATA_API_KEY = "53821bf38bec40e4a88bd1fa06ac32b3";
 const SYMBOL = "EUR/USD";
-const REFRESH_INTERVAL = 60000;
+const REFRESH_INTERVAL = 120000;   // 2 minutes UI refresh
 const CANDLE_LIMIT = 220;
 
 const TSConfig = {
@@ -31,50 +28,85 @@ const TSConfig = {
     NEWS_BLOCK_MINUTES: 10
 };
 
+const CACHE_TTL = {
+    price: 120000,
+    M5:    300000,
+    M15:   900000,
+    H1:    3600000,
+    H4:    14400000,
+    news:  1800000
+};
+
 const NEWS_API_BASE = "https://biquote.io/api/calendar";
 const NEWS_COUNTRIES = "US,EU";
 const NEWS_IMPORTANCE = "high";
 
-/* =========================================================
-   DATA ENGINE STATE
-   ========================================================= */
+const cache = {
+    price:  { value: null, ts: 0 },
+    candles: {
+        H4:  { data: [], ts: 0 },
+        H1:  { data: [], ts: 0 },
+        M30: { data: [], ts: 0 },
+        M15: { data: [], ts: 0 },
+        M5:  { data: [], ts: 0 }
+    },
+    news:   { value: null, ts: 0 }
+};
+
+function isFresh(entry, ttl) {
+    return (Date.now() - entry.ts) < ttl;
+}
+
 const DataEngine = {
     pair: SYMBOL,
     connected: false,
     lastUpdate: null,
     livePrice: null,
     candles: { H4: [], H1: [], M30: [], M15: [], M5: [] },
-    status: { H4: "WAITING", H1: "WAITING", M30: "WAITING", M15: "WAITING", M5: "WAITING", price: "WAITING" }
+    status: { H4: "WAITING", H1: "WAITING", M30: "WAITING", M15: "WAITING", M5: "WAITING", price: "WAITING" },
+    apiCallsToday: 0,
+    apiDay: new Date().toISOString().slice(0, 10)
 };
 
 let loadingMarketData = false;
 
-/* =========================================================
-   NEWS STATE
-   ========================================================= */
+function trackApiCall() {
+    const today = new Date().toISOString().slice(0, 10);
+    if (DataEngine.apiDay !== today) {
+        DataEngine.apiDay = today;
+        DataEngine.apiCallsToday = 0;
+        localStorage.setItem("apiCallsToday", "0");
+        localStorage.setItem("apiDay", today);
+    }
+    DataEngine.apiCallsToday++;
+    localStorage.setItem("apiCallsToday", String(DataEngine.apiCallsToday));
+    const el = document.getElementById("apiCalls");
+    if (el) el.textContent = DataEngine.apiCallsToday + " / 800";
+}
+
+(function initApiCounter() {
+    const today = new Date().toISOString().slice(0, 10);
+    const savedDay = localStorage.getItem("apiDay");
+    const savedCount = parseInt(localStorage.getItem("apiCallsToday") || "0", 10);
+    if (savedDay === today) {
+        DataEngine.apiCallsToday = savedCount;
+    } else {
+        DataEngine.apiCallsToday = 0;
+        localStorage.setItem("apiDay", today);
+        localStorage.setItem("apiCallsToday", "0");
+    }
+})();
+
 let newsData = {
-    connected: false,
-    events: [],
-    lastUpdated: null,
-    blocked: false,
-    blockingEvent: null,
-    nextEUR: null,
-    nextUSD: null,
-    error: null
+    connected: false, events: [], lastUpdated: null,
+    blocked: false, blockingEvent: null,
+    nextEUR: null, nextUSD: null, error: null
 };
 
-/* =========================================================
-   TRADE STATE (localStorage)
-   ========================================================= */
 const STATE_KEY = "twosided_state_v1";
-
 let tradeState = {
-    openTrade: null,
-    lastTradeTime: null,
-    tradesToday: 0,
-    currentDay: null,
-    lastOutcome: null,
-    history: []
+    openTrade: null, lastTradeTime: null, tradesToday: 0,
+    currentDay: null, lastOutcome: null, history: []
 };
 
 function loadState() {
@@ -101,35 +133,21 @@ function resetDayIfNeeded() {
     }
 }
 
-/* =========================================================
-   DOM HELPERS
-   ========================================================= */
 function getElement(id) { return document.getElementById(id); }
-
-function setText(id, value) {
-    const el = getElement(id);
-    if (el) el.textContent = value;
-}
-
+function setText(id, value) { const el = getElement(id); if (el) el.textContent = value; }
 function setManyText(ids, value) { ids.forEach(id => setText(id, value)); }
-
 function formatPrice(v) {
     if (v === null || v === undefined) return "—";
     const n = Number(v);
     return Number.isFinite(n) ? n.toFixed(5) : "—";
 }
-
 function formatNumber(v, d = 2) {
     if (v === null || v === undefined) return "—";
     const n = Number(v);
     return Number.isFinite(n) ? n.toFixed(d) : "—";
 }
-
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-/* =========================================================
-   CLOCK + SESSION
-   ========================================================= */
 function updateIndiaTime() {
     const india = new Intl.DateTimeFormat("en-IN", {
         timeZone: "Asia/Kolkata",
@@ -160,10 +178,8 @@ function updateTradingSession() {
     setManyText(["session", "tradingSession", "currentSession"], s.name);
 }
 
-/* =========================================================
-   TWELVE DATA PROVIDER
-   ========================================================= */
 async function twelveData(endpoint, params = {}) {
+    trackApiCall();
     const url = new URL("https://api.twelvedata.com/" + endpoint);
     url.searchParams.set("apikey", TWELVE_DATA_API_KEY);
     Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
@@ -174,34 +190,42 @@ async function twelveData(endpoint, params = {}) {
     return data;
 }
 
-async function fetchLivePrice() {
+async function fetchLivePrice(force = false) {
+    if (!force && isFresh(cache.price, CACHE_TTL.price)) {
+        DataEngine.livePrice = cache.price.value;
+        return cache.price.value;
+    }
     try {
         const data = await twelveData("price", { symbol: SYMBOL });
         const price = Number(data.price);
         if (!Number.isFinite(price)) throw new Error("Invalid price");
         DataEngine.livePrice = price;
+        cache.price = { value: price, ts: Date.now() };
         DataEngine.status.price = "READY";
         DataEngine.lastUpdate = Date.now();
-        setManyText(["price", "livePrice", "currentPrice", "riskLivePrice", "riskEntry", "entryPrice"],
-            formatPrice(price));
+        setManyText(["price", "livePrice", "currentPrice"], formatPrice(price));
         return price;
     } catch (e) {
-        console.error("Live price error:", e);
-        if (DataEngine.livePrice !== null) {
-            setManyText(["price", "livePrice", "currentPrice"], formatPrice(DataEngine.livePrice));
+        console.error("Price fetch error:", e);
+        if (cache.price.value !== null) {
+            DataEngine.livePrice = cache.price.value;
+            setManyText(["price", "livePrice", "currentPrice"], formatPrice(cache.price.value));
         }
         return DataEngine.livePrice;
     }
 }
 
-async function fetchCandles(interval) {
+async function fetchCandlesCached(tf, interval, ttl) {
+    if (isFresh(cache.candles[tf], ttl) && cache.candles[tf].data.length > 0) {
+        return cache.candles[tf].data;
+    }
     try {
         const data = await twelveData("time_series", {
             symbol: SYMBOL, interval: interval,
             outputsize: CANDLE_LIMIT, timezone: "UTC", order: "ASC"
         });
         if (!data.values || !Array.isArray(data.values)) throw new Error("No values");
-        return data.values.map(c => ({
+        const candles = data.values.map(c => ({
             time: Math.floor(new Date(c.datetime).getTime() / 1000),
             open: Number(c.open), high: Number(c.high),
             low: Number(c.low), close: Number(c.close),
@@ -210,9 +234,11 @@ async function fetchCandles(interval) {
             Number.isFinite(c.open) && Number.isFinite(c.high) &&
             Number.isFinite(c.low) && Number.isFinite(c.close)
         );
+        cache.candles[tf] = { data: candles, ts: Date.now() };
+        return candles;
     } catch (e) {
-        console.error(interval + " fetch error:", e);
-        return [];
+        console.error(tf + " fetch error:", e);
+        return cache.candles[tf].data || [];
     }
 }
 
@@ -232,16 +258,13 @@ function resampleM30(m15) {
 }
 
 async function loadAllCandles() {
-    DataEngine.candles.H4  = await fetchCandles("4h");   await sleep(1200);
-    DataEngine.candles.H1  = await fetchCandles("1h");   await sleep(1200);
-    DataEngine.candles.M15 = await fetchCandles("15min");await sleep(1200);
-    DataEngine.candles.M5  = await fetchCandles("5min");
+    DataEngine.candles.H4  = await fetchCandlesCached("H4",  "4h",    CACHE_TTL.H4);
+    DataEngine.candles.H1  = await fetchCandlesCached("H1",  "1h",    CACHE_TTL.H1);
+    DataEngine.candles.M15 = await fetchCandlesCached("M15", "15min", CACHE_TTL.M15);
+    DataEngine.candles.M5  = await fetchCandlesCached("M5",  "5min",  CACHE_TTL.M5);
     DataEngine.candles.M30 = resampleM30(DataEngine.candles.M15);
 }
 
-/* =========================================================
-   INDICATORS
-   ========================================================= */
 function getCloses(c) { return c.map(x => Number(x.close)); }
 
 function calculateEMA(values, period) {
@@ -273,9 +296,6 @@ function calculateRSI(candles, period = 14) {
     return 100 - (100 / (1 + ag / al));
 }
 
-/* =========================================================
-   HTF BIAS — H4 + H1 + M30 EMA50
-   ========================================================= */
 function getTimeframeBias(candles) {
     if (!candles || candles.length < TSConfig.EMA_PERIOD + 5) return "RANGE";
     const ema = calculateEMA(getCloses(candles), TSConfig.EMA_PERIOD);
@@ -296,9 +316,6 @@ function getHTFBias() {
     return { bias, h4, h1, m30 };
 }
 
-/* =========================================================
-   M5 STRUCTURE BREAK
-   ========================================================= */
 function getM5Break() {
     const m5 = DataEngine.candles.M5;
     if (!m5 || m5.length < 3) return { direction: null, reason: "NO_DATA" };
@@ -309,9 +326,6 @@ function getM5Break() {
     return { direction: null, reason: "NO_STRUCTURE_BREAK" };
 }
 
-/* =========================================================
-   M15 CHoCH
-   ========================================================= */
 function getM15CHoCH() {
     const m15 = DataEngine.candles.M15;
     if (!m15 || m15.length < 3) return null;
@@ -322,9 +336,6 @@ function getM15CHoCH() {
     return null;
 }
 
-/* =========================================================
-   SWEEP CHECK
-   ========================================================= */
 function checkSweep(direction) {
     const m5 = DataEngine.candles.M5;
     if (!m5 || m5.length < 22) return false;
@@ -341,16 +352,22 @@ function checkSweep(direction) {
     return false;
 }
 
-/* =========================================================
-   ENTRY DECISION
-   ========================================================= */
 function evaluateEntry() {
     const m5 = DataEngine.candles.M5;
-    if (!m5 || m5.length < 60) {
-        return { signal: null, direction: null, reason: "INSUFFICIENT_DATA", bias: "RANGE" };
-    }
-    const rsi = calculateRSI(m5, TSConfig.RSI_PERIOD);
     const { bias, h4, h1, m30 } = getHTFBias();
+    const rsi = (m5 && m5.length > 14) ? calculateRSI(m5, TSConfig.RSI_PERIOD) : null;
+
+    if (!m5 || m5.length < 60) {
+        return {
+            signal: null, direction: null,
+            reason: "INSUFFICIENT_DATA",
+            bias: bias || "RANGE", rsi: rsi,
+            h4Trend: h4 || "RANGE",
+            h1Trend: h1 || "RANGE",
+            m30Trend: m30 || "RANGE"
+        };
+    }
+
     const { direction, reason } = getM5Break();
     const out = { signal: null, direction, bias, rsi, h4Trend: h4, h1Trend: h1, m30Trend: m30, reason };
 
@@ -388,10 +405,12 @@ function evaluateEntry() {
     return out;
 }
 
-/* =========================================================
-   NEWS
-   ========================================================= */
-async function fetchEconomicCalendar() {
+async function fetchEconomicCalendar(force = false) {
+    if (!force && isFresh(cache.news, CACHE_TTL.news) && cache.news.value) {
+        newsData = cache.news.value;
+        updateNewsDisplay();
+        return;
+    }
     try {
         const now = new Date();
         const from = new Date(now.getTime() - 24 * 3600 * 1000);
@@ -420,6 +439,8 @@ async function fetchEconomicCalendar() {
         const b = getCurrentNewsBlocker();
         newsData.blocked = b.blocked;
         newsData.blockingEvent = b.event;
+
+        cache.news = { value: { ...newsData }, ts: Date.now() };
         updateNewsDisplay();
     } catch (e) {
         console.error("Calendar error:", e);
@@ -501,9 +522,6 @@ function updateNewsDisplay() {
     setManyText(["newsBlocker"], b.status);
 }
 
-/* =========================================================
-   TRADE LIFECYCLE
-   ========================================================= */
 function canOpenNewTrade() {
     resetDayIfNeeded();
     if (tradeState.openTrade !== null) return { ok: false, reason: "TRADE_ALREADY_OPEN" };
@@ -572,9 +590,6 @@ function getStats() {
     return { wins, losses, timeouts, total: hist.length, netPips, winRate: wr };
 }
 
-/* =========================================================
-   UI DISPLAY
-   ========================================================= */
 function updateBiasDisplay(biasData) {
     setManyText(["bias", "biasMain"], biasData.bias);
     const tclass = t => t === "BULL" ? "bull" : t === "BEAR" ? "bear" : "range";
@@ -590,19 +605,25 @@ function updateBiasDisplay(biasData) {
 function updateSignalDisplay(entry, canOpen) {
     const sc = getElement("signal-card");
     const sig = getElement("signal");
+    const icon = getElement("signalIcon");
     const reason = getElement("signal_reason");
+
     if (entry.signal === "BUY") {
-        if (sc) sc.className = "signal-card firing";
-        if (sig) sig.textContent = "🔥 BUY";
+        if (sc) sc.className = "signal-card buy";
+        if (icon) icon.textContent = "🔥";
+        if (sig) sig.textContent = "BUY";
     } else if (entry.signal === "SELL") {
-        if (sc) sc.className = "signal-card firing-sell";
-        if (sig) sig.textContent = "🔥 SELL";
+        if (sc) sc.className = "signal-card sell";
+        if (icon) icon.textContent = "🔥";
+        if (sig) sig.textContent = "SELL";
     } else if (entry.direction) {
         if (sc) sc.className = "signal-card waiting";
-        if (sig) sig.textContent = "🟡 " + entry.direction + " blocked";
+        if (icon) icon.textContent = "🟡";
+        if (sig) sig.textContent = entry.direction + " BLOCKED";
     } else {
         if (sc) sc.className = "signal-card waiting";
-        if (sig) sig.textContent = "🟡 WAITING";
+        if (icon) icon.textContent = "🟡";
+        if (sig) sig.textContent = "WAITING";
     }
     if (reason) {
         const co = canOpen.reason !== "OK" ? " • " + canOpen.reason : "";
@@ -620,7 +641,7 @@ function updateStatsDisplay() {
     const p = getElement("s_pips");
     if (p) {
         p.textContent = (s.netPips >= 0 ? "+" : "") + s.netPips;
-        p.style.color = s.netPips > 0 ? "#00e59a" : s.netPips < 0 ? "#ff405d" : "#edf8ff";
+        p.style.color = s.netPips > 0 ? "#22c55e" : s.netPips < 0 ? "#ef4444" : "#e6e8ef";
     }
     setText("trades_today", (tradeState.tradesToday || 0) + " / " + TSConfig.MAX_TRADES_PER_DAY);
     setText("last_outcome", tradeState.lastOutcome || "--");
@@ -637,25 +658,43 @@ function updateTradeCard() {
     const opened = t.openedAt.split("T")[1].slice(0, 8);
     const expires = t.expiresAt.split("T")[1].slice(0, 8);
     tc.innerHTML = `<div class="trade-card ${cls}">
-        <div class="h">🔒 OPEN — ${t.side} @ ${t.entry}</div>
-        <div class="trade-row"><span class="k">SL</span><span class="v">${t.sl}</span></div>
-        <div class="trade-row"><span class="k">TP</span><span class="v">${t.tp}</span></div>
-        <div class="trade-row"><span class="k">Opened</span><span class="v">${opened}</span></div>
-        <div class="trade-row"><span class="k">Expires</span><span class="v">${expires}</span></div>
-        <div class="trade-row"><span class="k">Reason</span><span class="v">${t.reason}</span></div>
+        <div class="trade-header"><span>🔒 OPEN — ${t.side} @ ${t.entry}</span><span>${opened}</span></div>
+        <div class="trade-grid">
+            <div class="trade-field"><span>Stop Loss</span><span>${t.sl}</span></div>
+            <div class="trade-field"><span>Take Profit</span><span>${t.tp}</span></div>
+            <div class="trade-field"><span>Expires</span><span>${expires}</span></div>
+            <div class="trade-field"><span>Reason</span><span>${t.reason}</span></div>
+        </div>
     </div>`;
 }
 
 function updateInternals(entry) {
     const rsi = getElement("rsi");
     if (rsi) rsi.textContent = entry.rsi !== null ? entry.rsi.toFixed(1) : "—";
+
     setManyText(["m5_break", "m5Break"], entry.direction ? entry.direction.toLowerCase() : "none");
+
+    const rsiNote = getElement("rsiNote");
+    if (rsiNote) {
+        if (entry.rsi === null) rsiNote.textContent = "—";
+        else if (entry.rsi < 25) rsiNote.textContent = "oversold";
+        else if (entry.rsi > 75) rsiNote.textContent = "overbought";
+        else rsiNote.textContent = "normal";
+    }
+
+    const m5Note = getElement("m5Note");
+    if (m5Note) {
+        const canOpen = canOpenNewTrade();
+        if (tradeState.openTrade) m5Note.textContent = "TRADE OPEN";
+        else if (!canOpen.ok) m5Note.textContent = canOpen.reason;
+        else m5Note.textContent = "ready";
+    }
+
     setText("lastUpdate", new Date().toLocaleTimeString("en-IN", { hour12: false }));
+    const apiEl = getElement("apiCalls");
+    if (apiEl) apiEl.textContent = DataEngine.apiCallsToday + " / 800";
 }
 
-/* =========================================================
-   MAIN REFRESH
-   ========================================================= */
 async function requestMarketData() {
     if (loadingMarketData) return;
     loadingMarketData = true;
@@ -663,29 +702,24 @@ async function requestMarketData() {
         await fetchLivePrice();
         await loadAllCandles();
 
-        // 1. Check open trade first
         if (tradeState.openTrade && DataEngine.livePrice !== null) {
             updateOpenTrade(DataEngine.livePrice);
         }
 
-        // 2. Evaluate entry
         const entry = evaluateEntry();
         const canOpen = canOpenNewTrade();
         const news = evaluateNewsBlocker();
 
-        // 3. Open trade if signal + cooldown clear + no news
         if (entry.signal && canOpen.ok && news.valid) {
             openTrade(entry.signal, DataEngine.livePrice, entry.reason);
         }
 
-        // 4. Update UI
         updateBiasDisplay({ bias: entry.bias, h4: entry.h4Trend, h1: entry.h1Trend, m30: entry.m30Trend });
         updateSignalDisplay(entry, canOpen);
         updateStatsDisplay();
         updateTradeCard();
         updateInternals(entry);
 
-        // 5. Fetch news
         await fetchEconomicCalendar();
 
         DataEngine.connected = true;
@@ -697,9 +731,6 @@ async function requestMarketData() {
     }
 }
 
-/* =========================================================
-   START
-   ========================================================= */
 let dataEngineTimer = null;
 
 function startDataEngine() {
@@ -726,15 +757,15 @@ if (document.readyState === "loading") {
     startDashboard();
 }
 
-/* =========================================================
-   GLOBAL DEBUG ACCESS
-   ========================================================= */
 window.DataEngine = DataEngine;
 window.TwoSided = {
     state: tradeState,
     news: newsData,
+    cache: cache,
     refresh: requestMarketData,
+    refreshNews: () => fetchEconomicCalendar(true),
     getLivePrice: () => DataEngine.livePrice,
+    getApiCalls: () => DataEngine.apiCallsToday,
     evaluateEntry,
     getHTFBias,
     getStats,
