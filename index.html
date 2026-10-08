@@ -6,15 +6,11 @@
 <title>Two-Sided Elite Scalper</title>
 
 <style>
-/* =========================================================
-   BASE
-   ========================================================= */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
     --bg: #0b0e14;
     --card: #151925;
-    --card-2: #1a1f2e;
     --border: #1e2433;
     --text: #e6e8ef;
     --muted: #7a8296;
@@ -37,9 +33,6 @@ body {
     padding: 12px;
 }
 
-/* =========================================================
-   HEADER
-   ========================================================= */
 .header {
     background: var(--card);
     border-radius: 10px;
@@ -52,55 +45,24 @@ body {
     gap: 12px;
 }
 
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.brand-icon {
-    font-size: 20px;
-}
-
-.brand-title {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: -.2px;
-}
-
-.brand-sub {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 3px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-icon { font-size: 20px; }
+.brand-title { font-size: 15px; font-weight: 700; }
+.brand-sub { font-size: 11px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
 
 .status-dot {
     display: inline-block;
-    width: 6px;
-    height: 6px;
+    width: 6px; height: 6px;
     background: var(--green);
     border-radius: 50%;
     box-shadow: 0 0 6px var(--green);
     animation: pulse 2s infinite;
 }
 
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .3; }
-}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
 
-.clock {
-    font-size: 13px;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-}
+.clock { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-/* =========================================================
-   TOP ROW (4 cards)
-   ========================================================= */
 .top-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -130,24 +92,11 @@ body {
     line-height: 1.1;
 }
 
-.card-value.small {
-    font-size: 15px;
-    letter-spacing: 0;
-}
+.card-value.small { font-size: 15px; letter-spacing: 0; }
 
-.card-sub {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 6px;
-}
+.card-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
 
-/* Trend pills */
-.trend-row {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-    flex-wrap: wrap;
-}
+.trend-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 
 .pill {
     padding: 4px 9px;
@@ -157,24 +106,10 @@ body {
     letter-spacing: .5px;
 }
 
-.pill.bull {
-    background: rgba(34,197,94,.15);
-    color: #86efac;
-}
+.pill.bull { background: rgba(34,197,94,.15); color: #86efac; }
+.pill.bear { background: rgba(239,68,68,.15); color: #fca5a5; }
+.pill.range { background: rgba(122,130,150,.15); color: #cbd2e0; }
 
-.pill.bear {
-    background: rgba(239,68,68,.15);
-    color: #fca5a5;
-}
-
-.pill.range {
-    background: rgba(122,130,150,.15);
-    color: #cbd2e0;
-}
-
-/* =========================================================
-   SIGNAL CARD
-   ========================================================= */
 .signal-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -185,33 +120,20 @@ body {
     transition: all .3s ease;
 }
 
-.signal-card.waiting {
-    border-color: rgba(245,158,11,.4);
-}
-
+.signal-card.waiting { border-color: rgba(245,158,11,.4); }
 .signal-card.buy {
     border-color: var(--green);
     background: linear-gradient(180deg, rgba(34,197,94,.06) 0%, var(--card) 100%);
     box-shadow: 0 0 30px rgba(34,197,94,.12);
 }
-
 .signal-card.sell {
     border-color: var(--red);
     background: linear-gradient(180deg, rgba(239,68,68,.06) 0%, var(--card) 100%);
     box-shadow: 0 0 30px rgba(239,68,68,.12);
 }
 
-.signal-icon {
-    font-size: 32px;
-    margin-bottom: 8px;
-}
-
-.signal-main {
-    font-size: 30px;
-    font-weight: 800;
-    letter-spacing: 2px;
-}
-
+.signal-icon { font-size: 32px; margin-bottom: 8px; }
+.signal-main { font-size: 30px; font-weight: 800; letter-spacing: 2px; }
 .signal-card.waiting .signal-main { color: var(--yellow); }
 .signal-card.buy .signal-main { color: var(--green); }
 .signal-card.sell .signal-main { color: var(--red); }
@@ -223,9 +145,6 @@ body {
     letter-spacing: .5px;
 }
 
-/* =========================================================
-   STATS GRID (5 columns)
-   ========================================================= */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -248,26 +167,13 @@ body {
     margin-bottom: 6px;
 }
 
-.stat-value {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -.5px;
-}
-
+.stat-value { font-size: 22px; font-weight: 700; letter-spacing: -.5px; }
 .stat-value.green { color: var(--green); }
 .stat-value.red { color: var(--red); }
 .stat-value.yellow { color: var(--yellow); }
 .stat-value.blue { color: var(--blue); }
+.stat-sub { font-size: 10px; color: var(--dim); margin-top: 3px; }
 
-.stat-sub {
-    font-size: 10px;
-    color: var(--dim);
-    margin-top: 3px;
-}
-
-/* =========================================================
-   STATUS ROWS
-   ========================================================= */
 .status-panel {
     background: var(--card);
     border: 1px solid var(--border);
@@ -286,22 +192,11 @@ body {
 }
 
 .status-row:last-child { border-bottom: none; }
-
-.status-key {
-    color: var(--muted);
-}
-
-.status-val {
-    font-weight: 600;
-    color: var(--text);
-}
-
+.status-key { color: var(--muted); }
+.status-val { font-weight: 600; color: var(--text); word-break: break-word; text-align: right; padding-left: 12px; }
 .status-val.green { color: var(--green); }
 .status-val.red { color: var(--red); }
 
-/* =========================================================
-   OPEN TRADE
-   ========================================================= */
 .trade-card {
     background: var(--card);
     border-radius: 12px;
@@ -350,16 +245,6 @@ body {
 .trade-field span:first-child { color: var(--muted); }
 .trade-field span:last-child { font-weight: 600; }
 
-/* =========================================================
-   BOTTOM GRID (News)
-   ========================================================= */
-.bottom-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 12px;
-}
-
 .panel-header {
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
@@ -370,9 +255,6 @@ body {
     letter-spacing: 1.2px;
 }
 
-/* =========================================================
-   FOOTER
-   ========================================================= */
 .footer {
     padding: 16px;
     text-align: center;
@@ -381,13 +263,9 @@ body {
     letter-spacing: .5px;
 }
 
-/* =========================================================
-   MOBILE
-   ========================================================= */
 @media (max-width: 900px) {
     .top-row { grid-template-columns: repeat(2, 1fr); }
     .stats-grid { grid-template-columns: repeat(3, 1fr); }
-    .bottom-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 550px) {
@@ -405,9 +283,6 @@ body {
 
 <body>
 
-<!-- =======================================================
-     HEADER
-     ======================================================= -->
 <div class="header">
     <div class="brand">
         <div class="brand-icon">⚡</div>
@@ -422,11 +297,7 @@ body {
     <div class="clock" id="clock">--:--:--</div>
 </div>
 
-<!-- =======================================================
-     TOP ROW
-     ======================================================= -->
 <div class="top-row">
-
     <div class="card">
         <div class="card-label">Live Price</div>
         <div class="card-value" id="price">—</div>
@@ -454,21 +325,14 @@ body {
         <div class="card-value small" id="m5_break">none</div>
         <div class="card-sub" id="m5Note">—</div>
     </div>
-
 </div>
 
-<!-- =======================================================
-     SIGNAL CARD
-     ======================================================= -->
 <div class="signal-card waiting" id="signal-card">
     <div class="signal-icon" id="signalIcon">🟡</div>
     <div class="signal-main" id="signal">WAITING</div>
     <div class="signal-reason" id="signal_reason">Scanning market...</div>
 </div>
 
-<!-- =======================================================
-     STATS ROW
-     ======================================================= -->
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-label">Wins</div>
@@ -493,14 +357,8 @@ body {
     </div>
 </div>
 
-<!-- =======================================================
-     OPEN TRADE (dynamic)
-     ======================================================= -->
 <div id="trade_container"></div>
 
-<!-- =======================================================
-     STATUS ROWS
-     ======================================================= -->
 <div class="status-panel">
     <div class="status-row">
         <span class="status-key">Trades Today</span>
@@ -522,11 +380,12 @@ body {
         <span class="status-key">SL / TP</span>
         <span class="status-val">15 / 10 pips</span>
     </div>
+    <div class="status-row">
+        <span class="status-key">API Calls Today</span>
+        <span class="status-val" id="apiCalls">0 / 800</span>
+    </div>
 </div>
 
-<!-- =======================================================
-     NEWS PANEL
-     ======================================================= -->
 <div class="status-panel">
     <div class="panel-header">High-Impact News Filter</div>
     <div class="status-row">
@@ -547,16 +406,10 @@ body {
     </div>
 </div>
 
-<!-- =======================================================
-     FOOTER
-     ======================================================= -->
 <div class="footer">
     Two-Sided Elite Scalper v1.0 · Powered by Twelve Data
 </div>
 
-<!-- =======================================================
-     ENGINE
-     ======================================================= -->
 <script src="data-engine.js"></script>
 
 </body>
