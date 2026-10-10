@@ -8,10 +8,49 @@
 <style>
 /* ============ GLOBAL RESET ============ */
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0b0e14;color:#e6e8ef;padding:12px;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+body{background:#0b0e14;color:#e6e8ef;padding:12px;padding-top:0;font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
 .divider{text-align:center;color:#2a3040;font-size:14px;letter-spacing:4px;margin:24px 0;user-select:none}
 
-/* ============ TWO-SIDED ELITE SCALPER (scoped) ============ */
+/* ============ ALERT BANNER (STICKY TOP) ============ */
+#alertBanner{
+  position:sticky;top:0;z-index:999;
+  margin:0 -12px 14px -12px;
+  padding:14px 16px;
+  background:#11161f;
+  border-bottom:2px solid #2a3040;
+  display:none;
+  animation:alertSlide .4s ease-out;
+}
+#alertBanner.show{display:block}
+#alertBanner.buy{border-bottom-color:#22c55e;background:linear-gradient(180deg,rgba(34,197,94,.12),#11161f)}
+#alertBanner.sell{border-bottom-color:#ef4444;background:linear-gradient(180deg,rgba(239,68,68,.12),#11161f)}
+#alertBanner.active{border-bottom-color:#22c55e;background:linear-gradient(180deg,rgba(34,197,94,.12),#11161f);animation:alertPulse 2s infinite}
+@keyframes alertPulse{0%,100%{box-shadow:0 0 0 rgba(34,197,94,0)}50%{box-shadow:0 4px 30px rgba(34,197,94,.3)}}
+@keyframes alertSlide{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+
+.alert-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.alert-badge{
+  font-size:11px;font-weight:800;letter-spacing:1px;
+  padding:4px 10px;border-radius:5px;
+  background:#4f8cff;color:#fff;
+}
+.alert-badge.buy{background:#22c55e;color:#0b0e14}
+.alert-badge.sell{background:#ef4444;color:#fff}
+.alert-badge.system{background:#8b5cf6;color:#fff}
+.alert-title{font-size:15px;font-weight:800;letter-spacing:.5px;flex:1;min-width:200px}
+.alert-title.buy{color:#6dff8a}
+.alert-title.sell{color:#ff7b7b}
+.alert-detail{font-size:12px;color:#cbd2e0;margin-top:6px;line-height:1.5}
+.alert-detail b{color:#fff}
+.alert-close{
+  background:transparent;border:1px solid #2a3040;color:#7a8296;
+  padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;
+  font-family:inherit;
+}
+.alert-close:hover{background:#1a1f2b;color:#fff}
+.alert-time{font-size:10px;color:#666;margin-left:auto}
+
+/* ============ TWO-SIDED ELITE SCALPER ============ */
 .ts-wrap{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   font-variant-numeric:tabular-nums;
@@ -79,7 +118,7 @@ body{background:#0b0e14;color:#e6e8ef;padding:12px;font-size:14px;line-height:1.
 @media(max-width:900px){.ts-wrap .top-row{grid-template-columns:repeat(2,1fr)}.ts-wrap .stats-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:550px){.ts-wrap .card-value{font-size:18px}.ts-wrap .signal-main{font-size:22px}.ts-wrap .signal-icon{font-size:26px}.ts-wrap .stat-value{font-size:18px}.ts-wrap .stats-grid{grid-template-columns:repeat(2,1fr)}}
 
-/* ============ SWING COMMANDER (scoped) ============ */
+/* ============ SWING COMMANDER ============ */
 .sw-wrap{
   font-family:ui-monospace,Menlo,Consolas,monospace;
   padding:12px;background:#0a0e14;color:#d4d4d4;
@@ -127,9 +166,19 @@ body{background:#0b0e14;color:#e6e8ef;padding:12px;font-size:14px;line-height:1.
 
 <body>
 
-<!-- ============================================================ -->
-<!-- ============== SYSTEM 1 · TWO-SIDED ELITE SCALPER ========== -->
-<!-- ============================================================ -->
+<!-- ==================== TOP ALERT BANNER ==================== -->
+<div id="alertBanner">
+  <div class="alert-row">
+    <span class="alert-badge system" id="alertSystem">SYSTEM</span>
+    <span class="alert-badge" id="alertDir">BUY</span>
+    <span class="alert-title" id="alertTitle">New Trade Fired</span>
+    <span class="alert-time" id="alertTime">—</span>
+    <button class="alert-close" onclick="dismissAlert()">✕ Dismiss</button>
+  </div>
+  <div class="alert-detail" id="alertDetail">—</div>
+</div>
+
+<!-- ==================== SYSTEM 1 · TWO-SIDED ELITE SCALPER ==================== -->
 <div class="ts-wrap">
 
 <div class="header">
@@ -209,13 +258,9 @@ body{background:#0b0e14;color:#e6e8ef;padding:12px;font-size:14px;line-height:1.
 <div class="footer">Two-Sided Elite Scalper v1.0 · Powered by Twelve Data</div>
 </div>
 
-<!-- ============================================================ -->
 <div class="divider">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
-<!-- ============================================================ -->
 
-<!-- ============================================================ -->
-<!-- ============== SYSTEM 2 · SWING COMMANDER ================== -->
-<!-- ============================================================ -->
+<!-- ==================== SYSTEM 2 · SWING COMMANDER ==================== -->
 <div class="sw-wrap">
 <div class="header">
   <div class="pair">EUR/USD · SWING COMMANDER</div>
@@ -224,17 +269,82 @@ body{background:#0b0e14;color:#e6e8ef;padding:12px;font-size:14px;line-height:1.
 <div id="root"><div class="card">loading...</div></div>
 </div>
 
-<!-- ============ EXTERNAL SCRIPTS ============ -->
-<!-- System 1: Loads data-engine.js (keep this file in same folder) -->
+<!-- ==================== ALERT BANNER LOGIC (SHARED) ==================== -->
+<script>
+// Global alert banner functions — callable by any system
+window.ALERT_KEY = "dual_alert_state_v1";
+
+window.showTradeAlert = function(system, side, entry, sl, tp, reason){
+  const banner = document.getElementById("alertBanner");
+  const sysBadge = document.getElementById("alertSystem");
+  const dirBadge = document.getElementById("alertDir");
+  const title = document.getElementById("alertTitle");
+  const detail = document.getElementById("alertDetail");
+  const timeEl = document.getElementById("alertTime");
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("en-IN", { timeZone:"Asia/Kolkata", hour12:false });
+
+  // Direction styling
+  const dirClass = side.toLowerCase();
+  banner.className = "show " + dirClass;
+  dirBadge.className = "alert-badge " + dirClass;
+  dirBadge.textContent = side;
+
+  sysBadge.textContent = system;
+  title.textContent = "🔥 " + system + " FIRED " + side;
+  title.className = "alert-title " + dirClass;
+  timeEl.textContent = timeStr + " IST";
+
+  // Detail line with levels
+  let d = "";
+  if(entry) d += "Entry <b>" + entry.toFixed(entry > 10 ? 2 : 5) + "</b>";
+  if(sl) d += " · SL <b>" + sl.toFixed(sl > 10 ? 2 : 5) + "</b>";
+  if(tp) d += " · TP <b>" + tp.toFixed(tp > 10 ? 2 : 5) + "</b>";
+  if(reason) d += "<br>Reason: " + reason;
+  detail.innerHTML = d;
+
+  // Persist so refresh keeps banner
+  try{
+    localStorage.setItem(window.ALERT_KEY, JSON.stringify({
+      system, side, entry, sl, tp, reason, time: now.getTime()
+    }));
+  }catch(e){}
+
+  // Auto-scroll to top so user sees it
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+window.dismissAlert = function(){
+  document.getElementById("alertBanner").className = "";
+  try{ localStorage.removeItem(window.ALERT_KEY); }catch(e){}
+};
+
+// Restore alert on page refresh
+window.restoreAlert = function(){
+  try{
+    const raw = localStorage.getItem(window.ALERT_KEY);
+    if(!raw) return;
+    const a = JSON.parse(raw);
+    // Only restore if it's less than 24 hours old
+    if(Date.now() - a.time < 24*60*60*1000){
+      window.showTradeAlert(a.system, a.side, a.entry, a.sl, a.tp, a.reason);
+    }
+  }catch(e){}
+};
+
+window.restoreAlert();
+</script>
+
+<!-- ==================== SYSTEM 1 · EXTERNAL SCRIPT ==================== -->
 <script src="data-engine.js"></script>
 
-<!-- System 2: Swing Commander (isolated in IIFE) -->
+<!-- ==================== SYSTEM 2 · INLINE SCRIPT ==================== -->
 <script>
 (function(){
 "use strict";
 const API_KEY = "4ba3968e609544bf8990192fdf3ed970";
 const SYMBOL = "EUR/USD";
-const REFRESH = 120000;
 const PIP = 0.0001;
 const STATE_KEY = "swing_state_v1";
 const Modes = {
@@ -246,6 +356,7 @@ const WEIGHTS = { PULLBACK:0.25, BREAKOUT:0.20, LIQUIDITY:0.20, RANGE:0.15, MOME
 let marketData = { D1:[], H4:[], H1:[] };
 let state = loadState();
 let loading = false;
+let lastAlertedMode = null;
 
 function emptyMode(){return{open_trade:null,today:{wins:0,losses:0},cooldown_until:null}}
 function emptyState(){return{HIGH_OPPORTUNITY:emptyMode(),BALANCED:emptyMode(),SNIPER:emptyMode()}}
@@ -442,12 +553,43 @@ async function loadAll(){
   marketData.D1=await fetchCandles("1day",300);
   marketData.H4=await fetchCandles("4h",300);
   marketData.H1=await fetchCandles("1h",500)}
+function fireAlert(mode, side, price){
+  // Avoid duplicate alerts for same mode + side + price
+  const key = mode + "_" + side + "_" + price.toFixed(5);
+  if(lastAlertedMode === key) return;
+  lastAlertedMode = key;
+
+  // Compute SL/TP (placeholder — real values should come from trade engine)
+  const isBuy = side === "BUY";
+  const sl = isBuy ? price - 0.0015 : price + 0.0015;
+  const tp = isBuy ? price + 0.0010 : price - 0.0010;
+
+  if(window.showTradeAlert){
+    window.showTradeAlert(
+      "SWING " + mode.replace(/_/g," "),
+      side,
+      price,
+      sl,
+      tp,
+      "Bias score " + (processModes()?.modes?.[mode]?.bias_score || 0).toFixed(1)
+    );
+  }
+}
 function render(r){
   const root=document.getElementById("root");if(!root)return;
   if(!r){root.innerHTML='<div class="card">loading candles...</div>';return}
   const m=r.market;
   const tEl=document.getElementById("time");
   if(tEl)tEl.textContent=new Date().toLocaleString("en-IN",{timeZone:"Asia/Kolkata",hour12:false});
+
+  // Fire alert for any mode that just turned BUY/SELL
+  for(const mode of ["HIGH_OPPORTUNITY","BALANCED","SNIPER"]){
+    const md = r.modes[mode];
+    if(md.final === "BUY" || md.final === "SELL"){
+      fireAlert(mode, md.final, m.price);
+    }
+  }
+
   let h='<div class="card"><div class="price">'+(m.price?m.price.toFixed(5):"—")+'</div>'
     +'<span class="regime '+m.regime+'">'+m.regime+'</span>'
     +'<span class="bias '+m.bias+'">BIAS '+m.bias+'</span>'
@@ -484,7 +626,21 @@ async function tick(){
   catch(e){console.error(e);const root=document.getElementById("root");
     if(root)root.innerHTML='<div class="err">Error: '+e.message+'</div>'}
   finally{loading=false}}
-async function start(){render(null);await tick();setInterval(tick,REFRESH)}
+
+async function start(){
+  render(null);
+  await tick();
+  function scheduleNextTick(){
+    const now = Date.now();
+    const msIntoBlock = now % 300000;
+    const msUntilNext = 300000 - msIntoBlock + 5000;
+    setTimeout(async () => {
+      await tick();
+      scheduleNextTick();
+    }, msUntilNext);
+  }
+  scheduleNextTick();
+}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);
 else start();
 })();
